@@ -11,7 +11,7 @@
     if (t) document.documentElement.classList.add('is-touch');
 })();
 </script>
-    <title>CraftJS - Mobile & Desktop 3D Minecraft Clone</title>
+    <title>CraftJS — A Living Block-Built World</title>
     <!-- Tailwind CSS for UI Overlays -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Three.js for 3D Graphics -->
@@ -24,7 +24,7 @@
             overflow: hidden;
             user-select: none;
             -webkit-user-select: none;
-            background: #111;
+            background: #87ceeb;
             touch-action: none; /* Prevent default pinch zoom and pan on game body */
         }
         .pixel-font {
@@ -137,9 +137,22 @@
         .block-icon { width: 84%; height: 84%; image-rendering: pixelated; pointer-events: none; animation: blockfloat 2.4s ease-in-out infinite; filter: drop-shadow(0 3px 2px rgba(0,0,0,0.55)); }
         .hotbar-slot-active .block-icon { animation-duration: 1.5s; }
         @keyframes blockfloat { 0%, 100% { transform: translateY(2px); } 50% { transform: translateY(-3px); } }
+        #vitals { box-sizing: border-box; width: max-content; max-width: calc(100vw - 24px); align-items: center; justify-content: center; gap: 8px; padding: 4px 9px; transform: none; }
+        #health-bar, #hunger-bar { min-width: 0; gap: 1px; }
+        #health-bar > * + *, #hunger-bar > * + * { margin-left: 0 !important; }
+        #vitals .ui-ico { flex: 0 1 22px; min-width: 0; width: clamp(14px, 2.7vw, 22px); height: clamp(14px, 2.7vw, 22px); object-fit: contain; }
+        #vitals > .w-px { flex: none; height: 20px; }
+        #help-modal { z-index: 60; }
+        body.title-screen #ui-layer { visibility: hidden; }
+        #canvas-container { background: #87ceeb; }
+        #canvas-container canvas { display: block; }
+        #splash-screen {
+            overflow: hidden; background: transparent; transition: opacity 700ms ease;
+        }
+        @media (max-width: 380px) { #vitals { gap: 5px; padding: 3px 6px; } }
     </style>
 </head>
-<body class="h-full w-full relative text-white overflow-hidden">
+<body class="title-screen h-full w-full relative text-white overflow-hidden">
 
     <!-- 3D Canvas Container -->
     <div id="canvas-container" class="absolute inset-0 z-0"></div>
@@ -223,6 +236,36 @@
             <div class="flex justify-between items-center">
                 <h2 id="pet-title" class="text-2xl font-extrabold pixel-font tracking-wider text-emerald-400">PET</h2>
                 <button id="close-pet" class="text-zinc-400 hover:text-white font-bold text-xl px-3 py-1 rounded-lg bg-white/5 hover:bg-white/15 transition">✕</button>
+            </div>
+            <div id="villager-modal" class="absolute inset-0 z-40 bg-black/80 backdrop-blur-md flex items-center justify-center hidden pointer-events-auto p-4">
+                <div class="bg-zinc-900/95 border border-emerald-300/20 p-5 sm:p-6 rounded-3xl shadow-2xl w-full max-w-lg flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+                    <div class="flex justify-between items-start gap-4">
+                        <div>
+                            <span class="text-[10px] uppercase tracking-[.25em] text-emerald-300">Village resident</span>
+                            <h2 id="villager-name" class="text-3xl font-extrabold pixel-font tracking-wider text-emerald-200">Villager</h2>
+                        </div>
+                        <button id="close-villager" class="text-zinc-400 hover:text-white font-bold text-xl px-3 py-1 rounded-lg bg-white/5 hover:bg-white/15 transition" aria-label="Close villager">✕</button>
+                    </div>
+                    <p id="villager-dialogue" class="rounded-2xl bg-black/35 border border-white/5 px-4 py-3 text-sm leading-relaxed text-zinc-300"></p>
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-bold text-sm text-white">Trade</span>
+                            <span class="text-xs text-zinc-500">Exchange goods from your inventory</span>
+                        </div>
+                        <div id="villager-trades" class="space-y-2"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="sign-modal" class="absolute inset-0 z-40 bg-black/80 backdrop-blur-md flex items-center justify-center hidden pointer-events-auto p-4">
+                <div class="bg-zinc-900/95 border border-amber-200/20 p-5 sm:p-6 rounded-3xl shadow-2xl w-full max-w-md flex flex-col gap-3">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-2xl font-extrabold pixel-font tracking-wider text-amber-200">WOODEN SIGN</h2>
+                        <button id="close-sign" class="text-zinc-400 hover:text-white font-bold text-xl px-3 py-1 rounded-lg bg-white/5 hover:bg-white/15 transition" aria-label="Close sign editor">✕</button>
+                    </div>
+                    <label for="sign-text" class="text-sm text-zinc-400">Write a message for your world</label>
+                    <textarea id="sign-text" maxlength="64" rows="3" class="resize-none bg-black/50 border border-white/20 rounded-xl px-3 py-2 text-white outline-none focus:border-amber-300"></textarea>
+                    <div class="flex justify-between items-center text-xs text-zinc-500"><span>Up to 64 characters</span><button id="save-sign" class="px-5 py-2 rounded-xl bg-amber-700 hover:bg-amber-600 text-white font-bold text-sm">Save sign</button></div>
+                </div>
             </div>
             <label for="pet-name" class="text-sm text-zinc-400">Name</label>
             <div class="flex gap-2">
@@ -309,6 +352,13 @@
                 <h2 class="text-2xl md:text-3xl font-extrabold pixel-font tracking-wider text-yellow-400">GAME CONTROLS</h2>
                 <button id="close-help" class="text-zinc-400 hover:text-white font-bold text-xl px-3 py-1 rounded-lg bg-white/5 hover:bg-white/15 transition">✕</button>
             </div>
+            <label for="toggle-night-mobs" class="flex items-center justify-between gap-4 bg-black/40 p-4 rounded-xl border border-white/10 cursor-pointer">
+                <span>
+                    <span class="block font-bold text-white">Night mob patch</span>
+                    <span class="block text-xs text-zinc-400 mt-1">Uncheck to disable zombies and armed ghosts at night</span>
+                </span>
+                <input id="toggle-night-mobs" type="checkbox" checked class="h-5 w-5 accent-emerald-500 shrink-0">
+            </label>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-zinc-300 text-sm">
                 <div class="flex justify-between bg-black/40 p-3 rounded-xl border border-white/5">
                     <span class="font-medium">Move / Walk</span>
@@ -316,7 +366,7 @@
                 </div>
                 <div class="flex justify-between bg-black/40 p-3 rounded-xl border border-white/5">
                     <span class="font-medium">Look Around</span>
-                    <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400">Touch Drag / Mouse</span>
+                    <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400">Touch Drag / Mouse (click-drag if needed)</span>
                 </div>
                 <div class="flex justify-between bg-black/40 p-3 rounded-xl border border-white/5">
                     <span class="font-medium">Jump</span>
@@ -359,6 +409,18 @@
                     <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400 text-right">Place Btn on a door opens or closes it</span>
                 </div>
                 <div class="flex justify-between gap-3 bg-black/40 p-3 rounded-xl border border-white/5">
+                    <span class="font-medium">Ladders</span>
+                    <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400 text-right">Climb with W / Space, descend with S / Down</span>
+                </div>
+                <div class="flex justify-between gap-3 bg-black/40 p-3 rounded-xl border border-white/5">
+                    <span class="font-medium">Signs</span>
+                    <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400 text-right">Place a sign, then use it to write a message</span>
+                </div>
+                <div class="flex justify-between gap-3 bg-black/40 p-3 rounded-xl border border-white/5">
+                    <span class="font-medium">Villagers</span>
+                    <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400 text-right">Find a village and use a resident to talk or trade</span>
+                </div>
+                <div class="flex justify-between gap-3 bg-black/40 p-3 rounded-xl border border-white/5">
                     <span class="font-medium">Farming</span>
                     <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400 text-right">Hoe on grass, seeds on farmland, wheat feeds cows, sheep and pigs</span>
                 </div>
@@ -386,22 +448,25 @@
     </div>
 
     <!-- Initial Splash Screen Overlay -->
-    <div id="splash-screen" class="absolute inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center space-y-6 p-6 text-center">
-        <div class="space-y-2">
-            <h1 class="text-5xl sm:text-7xl md:text-8xl font-extrabold pixel-font tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-blue-500 animate-pulse">
-                CRAFTJS 3D
+    <div id="splash-screen" class="absolute inset-0 z-50 bg-transparent flex flex-col items-center justify-between p-6 text-center transition-opacity duration-700 pointer-events-none">
+        <div class="pt-12 md:pt-16 space-y-3 pointer-events-auto">
+            <h1 class="text-6xl sm:text-7xl md:text-9xl font-extrabold pixel-font tracking-widest text-white drop-shadow-[0_8px_16px_rgba(0,0,0,0.8)] animate-pulse">
+                CRAFTJS <span class="text-emerald-400">3D</span>
             </h1>
-            <p class="text-zinc-400 text-sm sm:text-lg">Mobile & Desktop Friendly Open-World 3D Sandbox</p>
+            <p class="text-zinc-200 text-sm sm:text-xl font-semibold drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] bg-black/30 backdrop-blur-sm px-4 py-1.5 rounded-full inline-block border border-white/10">
+                Mobile &amp; Desktop Friendly Open-World 3D Sandbox
+            </p>
         </div>
-        <div class="flex flex-col space-y-3 w-full max-w-xs">
-            <button id="btn-play" class="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl shadow-xl hover:shadow-emerald-500/20 transition text-lg">
+        <div class="flex-1"></div>
+        <div class="flex flex-col space-y-3 w-full max-w-sm pb-8 pointer-events-auto">
+            <button id="btn-play" class="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl shadow-[0_10px_25px_rgba(5,150,105,0.4)] hover:scale-105 active:scale-95 transition-all text-xl border border-emerald-400/40">
                 Play Now
             </button>
-            <button id="btn-controls-splash" class="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold rounded-2xl transition text-sm">
+            <button id="btn-controls-splash" class="w-full py-3.5 bg-zinc-900/80 hover:bg-zinc-800/90 backdrop-blur-md text-zinc-200 font-semibold rounded-2xl transition-all text-sm border border-white/15 shadow-xl">
                 How to Play
             </button>
+            <div class="text-xs text-zinc-400 pt-2 drop-shadow">Three.js • Tailwind CSS • Procedural 3D Diorama</div>
         </div>
-        <div class="text-xs text-zinc-600">Three.js • Tailwind CSS • Procedural Terrain</div>
     </div>
 
     <!-- Main Game Script -->
@@ -728,7 +793,13 @@
         const crossTx = fn => createPixelTexture(c => fn(c));
         const crossOpt = o => Object.assign({ transparent: true, cross: true, shape: 'cross', nocollide: true }, o || {});
         addBlock(49, 'Tall Grass', crossTx(c => { [[2, 6], [3, 9], [5, 12], [7, 8], [8, 14], [10, 10], [11, 7], [13, 12], [14, 6]].forEach((b, i) => { c.fillStyle = i % 2 ? '#6bbf3a' : '#4f9a2a'; c.fillRect(b[0], 16 - b[1], 1, b[1]); }); }), crossOpt());
-        const flowerTx = (head, center) => crossTx(c => { c.fillStyle = '#3f8a25'; c.fillRect(7, 8, 2, 8); c.fillRect(5, 11, 2, 1); c.fillRect(9, 10, 2, 1); c.fillStyle = head; c.fillRect(5, 4, 6, 4); c.fillRect(7, 3, 2, 6); c.fillStyle = center; c.fillRect(7, 5, 2, 2); });
+        const flowerTx = (head, center) => crossTx(c => {
+            c.fillStyle = '#286d31'; c.fillRect(7, 7, 2, 9); c.fillRect(5, 11, 3, 1); c.fillRect(8, 9, 3, 1);
+            c.fillStyle = head;
+            c.fillRect(6, 0, 4, 2); c.fillRect(3, 2, 10, 3); c.fillRect(1, 5, 14, 3); c.fillRect(3, 8, 10, 2); c.fillRect(6, 10, 4, 1);
+            c.fillStyle = center; c.fillRect(6, 4, 4, 3);
+            c.fillStyle = 'rgba(255,255,255,.7)'; c.fillRect(4, 3, 2, 1); c.fillRect(2, 5, 2, 1);
+        });
         addBlock(50, 'Red Flower', flowerTx('#d62828', '#ffe066'), crossOpt({ flower: true }));
         addBlock(51, 'Yellow Flower', flowerTx('#f2c230', '#8a5a20'), crossOpt({ flower: true }));
         addBlock(52, 'Mushroom', crossTx(c => { c.fillStyle = '#e8dcc0'; c.fillRect(7, 10, 2, 5); c.fillStyle = '#c0392b'; c.fillRect(4, 7, 8, 3); c.fillRect(5, 6, 6, 1); c.fillStyle = '#ffffff'; c.fillRect(5, 8, 1, 1); c.fillRect(8, 7, 1, 1); c.fillRect(10, 8, 1, 1); }), crossOpt());
@@ -741,6 +812,24 @@
         addBlock(296, 'Flame', tx('#ffb030', c => { dots(c, 20, '#ffe066'); dots(c, 12, '#ff6a00'); }), { glow: true });
         BlockTypes[282] = { id: 282, name: 'Torch', materials: BlockTypes[13].materials, transparent: true, shape: 'torch', base: 13, nocollide: true, light: true };
         BlockTypes[283] = { id: 283, name: 'Campfire', materials: BlockTypes[13].materials, transparent: true, shape: 'campfire', base: 13, nocollide: true, light: true };
+        const ladderTx = tx('#8b5a2b', c => {
+            c.fillStyle = '#523617'; c.fillRect(2, 0, 2, 16); c.fillRect(12, 0, 2, 16);
+            c.fillStyle = '#c18a4b'; [2, 7, 12].forEach(y => c.fillRect(3, y, 10, 2));
+            c.fillStyle = 'rgba(255,255,255,.18)'; c.fillRect(3, 2, 1, 4); c.fillRect(12, 7, 1, 4);
+        });
+        const signTx = tx('#b8894f', c => {
+            c.fillStyle = '#70451f'; c.fillRect(7, 8, 2, 8);
+            c.fillStyle = '#70451f'; c.fillRect(1, 1, 14, 9);
+            c.fillStyle = '#d1a467'; c.fillRect(2, 2, 12, 7);
+            c.fillStyle = '#795126'; c.fillRect(4, 4, 8, 1); c.fillRect(4, 6, 6, 1);
+        });
+        for (let facing = 0; facing < 4; facing++) {
+            BlockTypes[284 + facing] = { id: 284 + facing, name: 'Ladder', materials: ladderTx, transparent: true, shape: 'ladder', state: facing, nocollide: true };
+        }
+        for (let facing = 0; facing < 2; facing++) {
+            BlockTypes[288 + facing] = { id: 288 + facing, name: 'Sign', materials: signTx, transparent: true, shape: 'sign', state: facing, nocollide: true };
+        }
+        Recipes.push({ out: 284, n: 3, need: { 13: 7 } }, { out: 288, n: 3, need: { 13: 6 } });
         [42, 43, 44, 45, 46, 47].forEach(i => STONE_SET.add(i));
 
         Object.assign(ItemTypes, {
@@ -827,6 +916,8 @@
          ********************************-----------------------------*/
         class Game {
             constructor() {
+                this.gameStarted = false;
+                this.nightMobsEnabled = localStorage.getItem('craftjs_night_mobs_enabled') !== 'false';
                 this.container = document.getElementById('canvas-container');
                 this.scene = new THREE.Scene();
                 this.scene.background = new THREE.Color(0x87ceeb);
@@ -893,7 +984,6 @@
                     moveLeft: false,
                     moveRight: false,
                     jump: false,
-                    isLocked: false,
                     joystickVector: { x: 0, y: 0 },
                     down: false,
                     sprint: false
@@ -905,6 +995,7 @@
 
                 this.initWorld();
                 this.initPlayerPosition();
+                this.initTitleScreen();
                 this.initEvents();
                 this.initUI();
                 this.initTouchControls();
@@ -935,6 +1026,12 @@
                 this.inv = {};
                 this.drops = [];
                 this.animals = [];
+                this.villagers = [];
+                this.villagerMap = new Map();
+                this.signs = {};
+                this.signTags = new Map();
+                this.activeSignKey = null;
+                this.activeVillager = null;
                 this.chests = new Map(); this.arrows = []; this.fx = []; this.atkT = 0; this.eatT = 0; this.shootT = 0; this.fishing = null; this.chestKey = null; this.riding = null; this.petFor = null;
                 document.getElementById('close-chest').onclick = () => this.closeChest();
                 document.getElementById('close-pet').onclick = () => this.closePet();
@@ -1028,9 +1125,16 @@
                             this.growPine(put, x, h + 1, z);
                         } else if ((biome === 'plains' || biome === 'forest') && top === 1) {
                             const rr = this.hash(x, z, 3);
+                            const flowerRoll = this.hash(x, z, 90);
+                            let solitaryFlower = flowerRoll < 0.02;
+                            if (solitaryFlower) {
+                                for (let dx = -4; dx <= 4 && solitaryFlower; dx++)
+                                    for (let dz = -4; dz <= 4; dz++) {
+                                        if ((dx || dz) && this.hash(x + dx, z + dz, 90) < 0.02) { solitaryFlower = false; break; }
+                                    }
+                            }
                             if (rr < 0.09) put(x, h + 1, z, 49);
-                            else if (rr < 0.103) put(x, h + 1, z, 50);
-                            else if (rr < 0.116) put(x, h + 1, z, 51);
+                            else if (solitaryFlower) put(x, h + 1, z, this.hash(x, z, 91) < 0.5 ? 50 : 51);
                             else if (biome === 'forest' && rr < 0.128) put(x, h + 1, z, 52);
                         }
                     }
@@ -1055,6 +1159,13 @@
                     }
                 });
                 this.buildChunkMesh(cx, cz);
+                ch.keys.forEach(k => {
+                    const id = this.blocks.get(k);
+                    if (id === 288 || id === 289) {
+                        const [x, y, z] = k.split(',').map(Number);
+                        this.updateSignTag(x, y, z);
+                    }
+                });
                 rebuild.forEach(r => { const q = r.split(',').map(Number); this.buildChunkMesh(q[0], q[1]); });
             }
 
@@ -1084,7 +1195,22 @@
             unloadChunk(ck) {
                 const ch = this.chunks.get(ck);
                 if (!ch) return;
-                if (ch.group) { this.scene.remove(ch.group); ch.group.children.forEach(m => m.geometry.dispose()); }
+                if (ch.group) { this.scene.remove(ch.group); ch.group.children.forEach(m => { if (!m.isSprite) m.geometry.dispose(); }); }
+                this.villagers = this.villagers.filter(v => {
+                    if (v.chunk !== ck) return true;
+                    this.scene.remove(v.group);
+                    this.villagerMap.delete(v.id);
+                    return false;
+                });
+                this.signTags.forEach((sprite, key) => {
+                    const [x, , z] = key.split(',').map(Number);
+                    if (Math.floor(x / CH) === Number(ck.split(',')[0]) && Math.floor(z / CH) === Number(ck.split(',')[1])) {
+                        this.scene.remove(sprite);
+                        sprite.material.map.dispose();
+                        sprite.material.dispose();
+                        this.signTags.delete(key);
+                    }
+                });
                 ch.keys.forEach(k => this.blocks.delete(k));
                 this.chunks.delete(ck);
             }
@@ -1103,7 +1229,7 @@
             buildChunkMesh(cx, cz) {
                 const ch = this.chunks.get(cx + ',' + cz);
                 if (!ch) return;
-                if (ch.group) { this.scene.remove(ch.group); ch.group.children.forEach(m => m.geometry.dispose()); }
+                if (ch.group) { this.scene.remove(ch.group); ch.group.children.forEach(m => { if (!m.isSprite) m.geometry.dispose(); }); }
                 const byId = {}, shapes = [];
                 ch.crops = []; ch.flowers = []; ch.torches = [];
                 ch.keys.forEach(k => {
@@ -1134,8 +1260,18 @@
                     const lx = sh[0] - cx * CH, lz = sh[2] - cz * CH;
                     const bt = BlockTypes[sh[3]];
                     if (bt.cross) {
-                        const cb = sb[sh[3]] || (sb[sh[3]] = { pos: [], nrm: [], uv: [] });
-                        this.crossAdd(cb, lx, sh[1], lz);
+                        if (bt.flower) {
+                            this.flowerMaterials = this.flowerMaterials || {};
+                            if (!this.flowerMaterials[sh[3]]) this.flowerMaterials[sh[3]] = new THREE.MeshLambertMaterial({
+                                map: bt.materials, transparent: true, alphaTest: 0.25, side: THREE.DoubleSide
+                            });
+                            const flower = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 0.9), this.flowerMaterials[sh[3]]);
+                            flower.position.set(lx, sh[1] - 0.03, lz);
+                            group.add(flower);
+                        } else {
+                            const cb = sb[sh[3]] || (sb[sh[3]] = { pos: [], nrm: [], uv: [] });
+                            this.crossAdd(cb, lx, sh[1], lz);
+                        }
                         if (bt.crop) ch.crops.push(sh);
                         if (bt.flower) ch.flowers.push(sh);
                         return;
@@ -1161,6 +1297,14 @@
                     if (this.virtualAt(x, y, z) > 0) { this.blocks.set(k, 0); ch.keys.add(k); } else { this.blocks.delete(k); ch.keys.delete(k); }
                 } else { this.blocks.set(k, id); ch.keys.add(k); }
                 this.edits.set(k, id);
+                if (this.signTags.has(k)) {
+                    const sprite = this.signTags.get(k);
+                    this.scene.remove(sprite);
+                    sprite.material.map.dispose();
+                    sprite.material.dispose();
+                    this.signTags.delete(k);
+                }
+                if (id !== 288 && id !== 289) delete this.signs[k];
                 const extra = new Set();
                 if (id === 0) {
                     for (const d of [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) {
@@ -1169,6 +1313,7 @@
                     }
                 }
                 this.buildChunkMesh(cx, cz);
+                if (id === 288 || id === 289) this.updateSignTag(x, y, z);
                 const lx = x - cx * CH, lz = z - cz * CH;
                 if (lx === 0) this.buildChunkMesh(cx - 1, cz);
                 if (lx === CH - 1) this.buildChunkMesh(cx + 1, cz);
@@ -1298,10 +1443,26 @@
                 return this.getBlock(Math.round(p.x), Math.round(p.y - 0.9), Math.round(p.z)) === 9;
             }
 
+            nearLadder() {
+                const p = this.player.position;
+                const minY = Math.floor(p.y - p.height - 0.5), maxY = Math.floor(p.y + 0.2);
+                for (let x = Math.floor(p.x - 1); x <= Math.floor(p.x + 1); x++)
+                    for (let z = Math.floor(p.z - 1); z <= Math.floor(p.z + 1); z++) {
+                        if (Math.abs(x - p.x) > 0.85 || Math.abs(z - p.z) > 0.85) continue;
+                        for (let y = minY; y <= maxY; y++) {
+                            const b = BlockTypes[this.getBlock(x, y, z)];
+                            if (b && b.shape === 'ladder') return true;
+                        }
+                    }
+                return false;
+            }
+
             // Drops: small floating blocks textured like the block that was broken
             spawnDrop(x, y, z, id, n = 1) {
                 if (this.drops.length > 150) { const o = this.drops.shift(); this.scene.remove(o.mesh); }
-                const mesh = PixelSprites[id] ? this.pixelItemMesh(id) : new THREE.Mesh(this.dropGeo, isItem(id) ? this.itemMat(id) : this.materials[id]);
+                const mesh = BlockTypes[id] && BlockTypes[id].flower
+                    ? new THREE.Mesh(new THREE.PlaneGeometry(0.48, 0.62), this.materials[id])
+                    : PixelSprites[id] ? this.pixelItemMesh(id) : new THREE.Mesh(this.dropGeo, isItem(id) ? this.itemMat(id) : this.materials[id]);
                 mesh.position.set(x, y, z);
                 this.scene.add(mesh);
                 this.drops.push({ mesh, id, n, vy: 2.5, age: 0, phase: Math.random() * 6.28, vx: (Math.random() - 0.5) * 1.5, vz: (Math.random() - 0.5) * 1.5 });
@@ -1312,7 +1473,7 @@
                 for (let i = this.drops.length - 1; i >= 0; i--) {
                     const d = this.drops[i], m = d.mesh;
                     d.age += dt;
-                    m.rotation.y += dt * 1.8;
+                    if (!(BlockTypes[d.id] && BlockTypes[d.id].flower)) m.rotation.y += dt * 1.8;
                     const dx = pp.x - m.position.x, dy = (pp.y - 0.8) - m.position.y, dz = pp.z - m.position.z;
                     const dist = Math.hypot(dx, dy, dz);
                     if (d.magnet || (d.age > 0.6 && dist < 1.6)) {
@@ -1664,25 +1825,68 @@
                 this.camera.position.copy(this.player.position);
             }
 
+            initTitleScreen() {
+                this.titleCamAngle = 0;
+                this.camera.position.set(
+                    this.player.position.x - 12,
+                    this.player.position.y + 8,
+                    this.player.position.z - 12
+                );
+                this.camera.lookAt(this.player.position.x, this.player.position.y + 1.5, this.player.position.z);
+            }
+
+            updateTitleScreen(dt) {
+                if (this.gameStarted) return;
+                this.titleCamAngle += dt * 0.15;
+                const radius = 18;
+                const targetX = this.player.position.x + Math.cos(this.titleCamAngle) * radius;
+                const targetZ = this.player.position.z + Math.sin(this.titleCamAngle) * radius;
+                const targetY = this.player.position.y + 5 + Math.sin(this.titleCamAngle * 0.7) * 2;
+                const ease = Math.min(1, dt * 2);
+                this.camera.position.x += (targetX - this.camera.position.x) * ease;
+                this.camera.position.y += (targetY - this.camera.position.y) * ease;
+                this.camera.position.z += (targetZ - this.camera.position.z) * ease;
+                this.camera.lookAt(this.player.position.x, this.player.position.y + 1.5, this.player.position.z);
+            }
+
+            startGame() {
+                if (this.gameStarted) return;
+                this.gameStarted = true;
+                document.body.classList.remove('title-screen');
+                const splash = document.getElementById('splash-screen');
+                splash.style.opacity = '0';
+                setTimeout(() => splash.classList.add('hidden'), 700);
+                this.camera.position.copy(this.player.position);
+                this.yaw = 0;
+                this.pitch = 0;
+                this.camera.rotation.set(this.pitch, this.yaw, 0, 'YXZ');
+            }
+
             initEvents() {
                 const canvas = this.renderer.domElement;
+                this.fallbackLookX = null;
+                this.fallbackLookY = null;
                 
-                // Desktop Pointer Lock (Only trigger when NOT on mobile layout)
+                // Keep the cursor free so laptop trackpads can look, walk, and click together.
                 canvas.addEventListener('click', (e) => {
-                    if (!this.isMobile() && !this.controls.isLocked && this.pickDropAt((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1, 0.5, 6)) return;
-                    if (!this.isMobile() && !this.controls.isLocked && document.getElementById('inventory-modal').classList.contains('hidden') && document.getElementById('help-modal').classList.contains('hidden')) {
-                        canvas.requestPointerLock();
-                    }
-                });
-
-                document.addEventListener('pointerlockchange', () => {
-                    this.controls.isLocked = (document.pointerLockElement === canvas);
+                    if (this.gameStarted && !this.isMobile()) this.pickDropAt((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1, 0.5, 6);
                 });
 
                 // Mouse Look (Desktop)
                 document.addEventListener('mousemove', (e) => {
-                    if (!this.controls.isLocked) return;
-                    this.rotateCamera(e.movementX, e.movementY);
+                    const rect = canvas.getBoundingClientRect();
+                    const insideCanvas = e.clientX >= rect.left && e.clientX <= rect.right &&
+                        e.clientY >= rect.top && e.clientY <= rect.bottom;
+                    if (!this.gameStarted || !insideCanvas) {
+                        this.fallbackLookX = null;
+                        this.fallbackLookY = null;
+                        return;
+                    }
+                    if (this.fallbackLookX !== null && this.fallbackLookY !== null) {
+                        this.rotateCamera(e.clientX - this.fallbackLookX, e.clientY - this.fallbackLookY);
+                    }
+                    this.fallbackLookX = e.clientX;
+                    this.fallbackLookY = e.clientY;
                 });
 
                 // Keyboard Input (Desktop WASD & Space)
@@ -1691,11 +1895,12 @@
 
                 // Mouse actions
                 window.addEventListener('mousedown', (e) => {
-                    if (!this.controls.isLocked && !this.isMobile()) return;
-                    if (document.pointerLockElement || !this.isMobile()) {
-                        if (e.button === 0) this.handleRaycastAction('break');
-                        if (e.button === 2) this.handleRaycastAction('place');
+                    if (this.isMobile() || !this.gameStarted || (e.target !== canvas && e.target !== this.container)) return;
+                    if (e.button === 0) {
+                        const pickedUpDrop = this.pickDropAt((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1, 0.5, 6);
+                        if (!pickedUpDrop) this.handleRaycastAction('break');
                     }
+                    if (e.button === 2) this.handleRaycastAction('place');
                 });
                 window.addEventListener('contextmenu', e => e.preventDefault());
 
@@ -1988,6 +2193,24 @@
                     mk(38, [-0.45, -0.5, -0.1, 0.45, -0.28, 0.1]);
                     mk(38, [-0.1, -0.5, -0.45, 0.1, -0.28, 0.45]);
                     mk(296, [-0.13, -0.28, -0.13, 0.13, 0.12, 0.13]);
+                } else if (b.shape === 'ladder') {
+                    const facing = b.state || 0;
+                    const rotate = box => {
+                        const corners = [[box[0], box[2]], [box[3], box[5]]].map(([x, z]) => {
+                            if (facing === 1) return [-z, x];
+                            if (facing === 2) return [-x, -z];
+                            if (facing === 3) return [z, -x];
+                            return [x, z];
+                        });
+                        return [Math.min(corners[0][0], corners[1][0]), box[1], Math.min(corners[0][1], corners[1][1]), Math.max(corners[0][0], corners[1][0]), box[4], Math.max(corners[0][1], corners[1][1])];
+                    };
+                    [[-0.39, -0.5, 0.36, -0.29, 0.5, 0.48], [0.29, -0.5, 0.36, 0.39, 0.5, 0.48]].forEach(v => mk(13, rotate(v)));
+                    [-0.36, -0.12, 0.12, 0.36].forEach(y => mk(13, rotate([-0.3, y, 0.35, 0.3, y + 0.07, 0.48])));
+                } else if (b.shape === 'sign') {
+                    const facing = b.state || 0;
+                    const rotate = box => facing ? [-box[2], box[1], box[0], -box[5], box[4], box[3]] : box;
+                    mk(13, rotate([-0.055, -0.5, -0.055, 0.055, 0.02, 0.055]));
+                    mk(13, rotate([-0.47, -0.28, -0.07, 0.47, 0.34, 0.07]));
                 } else if (b.shape === 'door') {
                     const T = 0.1875, open = (b.state & 4) > 0, orient = (b.state >> 1) & 1;
                     let v;
@@ -2029,7 +2252,7 @@
                 return g;
             }
 
-            // Real 3D icon for stairs, slabs, fences and doors, rendered once on a tiny canvas
+            // Real 3D icons for shaped blocks, rendered once on a tiny canvas
             shapeIcon(id) {
                 if (!this.iconR) {
                     this.iconR = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true });
@@ -2085,6 +2308,13 @@
                     const lower = 300 + b.type * 8 + (Math.abs(fz) >= Math.abs(fx) ? 0 : 2);
                     this.setBlockAt(tx, ty, tz, lower);
                     this.setBlockAt(tx, ty + 1, tz, lower + 1);
+                } else if (b.shape === 'ladder') {
+                    let facing;
+                    if (Math.abs(hit.nx) > Math.abs(hit.nz)) facing = hit.nx > 0 ? 1 : 3;
+                    else facing = hit.nz > 0 ? 2 : 0;
+                    this.setBlockAt(tx, ty, tz, 284 + facing);
+                } else if (b.shape === 'sign') {
+                    this.setBlockAt(tx, ty, tz, 288 + (Math.abs(fx) > Math.abs(fz) ? 1 : 0));
                 } else if (b.shape === 'slab') {
                     const v = hit.ny > 0 ? 0 : (hit.ny < 0 ? 1 : ((hit.hy - hit.y) > 0 ? 1 : 0));
                     this.setBlockAt(tx, ty, tz, 200 + b.mi * 6 + v);
@@ -2316,6 +2546,7 @@
             }
 
             spawnHostiles(dt) {
+                if (!this.nightMobsEnabled) return;
                 this.mobTimer = (this.mobTimer || 0) - dt;
                 if (this.mobTimer > 0) return;
                 this.mobTimer = 2.5;
@@ -2336,6 +2567,23 @@
                 }
                 if (sy === null || this.nearTorch(sx, Math.floor(sy), sz, 9)) return;
                 this.addAnimal(Math.random() < 0.6 ? 'zombie' : 'skeleton', sx, sy, sz);
+            }
+
+            setNightMobsEnabled(enabled) {
+                this.nightMobsEnabled = enabled;
+                localStorage.setItem('craftjs_night_mobs_enabled', String(enabled));
+                if (!enabled) {
+                    this.animals.filter(a => a.hostile).forEach(a => this.removeAnimal(a));
+                    for (let i = this.arrows.length - 1; i >= 0; i--) {
+                        const arrow = this.arrows[i];
+                        if (!arrow.hostile) continue;
+                        this.scene.remove(arrow.mesh);
+                        arrow.mesh.geometry.dispose();
+                        arrow.mesh.material.dispose();
+                        this.arrows.splice(i, 1);
+                    }
+                }
+                this.toast(enabled ? 'Night mobs enabled' : 'Night mobs disabled');
             }
 
             spawnAmbient(dt) {
@@ -2598,6 +2846,198 @@
                 }
             }
 
+            updateSignTag(x, y, z) {
+                const key = `${x},${y},${z}`;
+                const old = this.signTags.get(key);
+                if (old) {
+                    this.scene.remove(old);
+                    old.material.map.dispose();
+                    old.material.dispose();
+                    this.signTags.delete(key);
+                }
+                if (this.getBlock(x, y, z) !== 288 && this.getBlock(x, y, z) !== 289) return;
+                const canvas = document.createElement('canvas');
+                canvas.width = 256; canvas.height = 128;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#493019';
+                ctx.font = 'bold 27px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const text = (this.signs[key] || 'Write here').slice(0, 64);
+                const words = text.split(/\s+/), lines = [];
+                let line = '';
+                words.forEach(word => {
+                    const next = line ? line + ' ' + word : word;
+                    if (ctx.measureText(next).width > 204 && line) { lines.push(line); line = word; }
+                    else line = next;
+                });
+                if (line) lines.push(line);
+                lines.slice(0, 3).forEach((row, i) => ctx.fillText(row, 128, 36 + i * 28, 208));
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.minFilter = THREE.LinearFilter;
+                texture.magFilter = THREE.LinearFilter;
+                const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false });
+                const sprite = new THREE.Sprite(material);
+                const turned = this.getBlock(x, y, z) === 289;
+                sprite.position.set(x + (turned ? 0.095 : 0), y + 0.03, z + (turned ? 0 : 0.095));
+                sprite.scale.set(0.77, 0.38, 1);
+                sprite.renderOrder = 3;
+                this.scene.add(sprite);
+                this.signTags.set(key, sprite);
+            }
+
+            openSign(key) {
+                this.activeSignKey = key;
+                document.getElementById('sign-text').value = this.signs[key] || '';
+                document.getElementById('sign-modal').classList.remove('hidden');
+                if (document.pointerLockElement) document.exitPointerLock();
+            }
+
+            saveSign() {
+                const key = this.activeSignKey;
+                if (!key) return;
+                const text = document.getElementById('sign-text').value.trim().slice(0, 64);
+                if (text) this.signs[key] = text;
+                else delete this.signs[key];
+                const [x, y, z] = key.split(',').map(Number);
+                this.updateSignTag(x, y, z);
+                this.activeSignKey = null;
+                document.getElementById('sign-modal').classList.add('hidden');
+            }
+
+            makeVillager(name) {
+                const group = new THREE.Group();
+                const box = (w, h, d, color, x, y, z, parent) => {
+                    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({ color }));
+                    mesh.position.set(x, y, z);
+                    (parent || group).add(mesh);
+                    return mesh;
+                };
+                const head = new THREE.Group();
+                head.position.set(0, 1.48, 0.03);
+                group.add(head);
+                box(0.48, 0.48, 0.44, 0xc99166, 0, 0, 0, head);
+                box(0.14, 0.18, 0.2, 0x9a684f, 0, -0.12, 0.27, head);
+                box(0.07, 0.07, 0.035, 0x251a18, -0.12, 0.05, 0.226, head);
+                box(0.07, 0.07, 0.035, 0x251a18, 0.12, 0.05, 0.226, head);
+                box(0.52, 0.16, 0.48, 0x493827, 0, 0.29, 0, head);
+                box(0.66, 0.82, 0.48, 0x547c62, 0, 0.97, 0);
+                box(0.7, 0.18, 0.52, 0x51402f, 0, 0.51, 0);
+                box(0.17, 0.56, 0.18, 0x5a4031, -0.2, 0.21, 0);
+                box(0.17, 0.56, 0.18, 0x5a4031, 0.2, 0.21, 0);
+                const tag = document.createElement('canvas');
+                tag.width = 256; tag.height = 64;
+                const c = tag.getContext('2d');
+                c.fillStyle = 'rgba(8,18,15,.78)';
+                c.fillRect(4, 4, 248, 56);
+                c.fillStyle = '#d1fae5'; c.font = 'bold 30px Inter, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(name, 128, 32);
+                const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(tag), transparent: true, depthWrite: false }));
+                sprite.position.set(0, 2.3, 0);
+                sprite.scale.set(1.35, 0.34, 1);
+                group.add(sprite);
+                this.scene.add(group);
+                return { group, head };
+            }
+
+            addVillager(x, y, z, id, variant) {
+                if (this.villagerMap.has(id)) return;
+                const roles = ['farmer', 'carpenter', 'miner'];
+                const names = ['Mira', 'Rowan', 'Tavi', 'Sage', 'Ari', 'Jun', 'Ellis', 'Niko'];
+                const name = names[Math.abs(variant * 7 + Math.floor(x + z)) % names.length];
+                const built = this.makeVillager(name);
+                built.group.position.set(x, y, z);
+                const villager = {
+                    id, x, y, z, homeX: x, homeZ: z, group: built.group, head: built.head,
+                    name,
+                    role: roles[variant % roles.length], phase: Math.random() * Math.PI * 2,
+                    chunk: Math.floor(x / CH) + ',' + Math.floor(z / CH)
+                };
+                this.villagers.push(villager);
+                this.villagerMap.set(id, villager);
+            }
+
+            updateVillagers(dt) {
+                this.villagers.forEach(v => {
+                    v.phase += dt;
+                    v.head.rotation.y = Math.sin(v.phase * 0.45) * 0.08;
+                    v.group.rotation.y = Math.sin(v.phase * 0.22) * 0.12;
+                    v.group.position.y = v.y + Math.sin(v.phase * 1.5) * 0.018;
+                });
+            }
+
+            villagerAt(maxDist) {
+                const origin = this.camera.position;
+                const direction = this.camera.getWorldDirection(new THREE.Vector3());
+                let best = null, bestT = maxDist;
+                this.villagers.forEach(v => {
+                    const dx = v.x - origin.x, dy = v.y + 1.05 - origin.y, dz = v.z - origin.z;
+                    const t = dx * direction.x + dy * direction.y + dz * direction.z;
+                    if (t < 0 || t > bestT) return;
+                    const d2 = dx * dx + dy * dy + dz * dz - t * t;
+                    if (d2 < 0.8 * 0.8) { best = v; bestT = t; }
+                });
+                return best;
+            }
+
+            openVillager(v) {
+                this.activeVillager = v;
+                const title = `${v.name} · ${v.role}`;
+                document.getElementById('villager-name').innerText = title;
+                const greetings = {
+                    farmer: 'The soil is good here. I trade the harvest for things that make a journey easier.',
+                    carpenter: 'A sturdy roof makes a home. I can spare a few useful supplies for good timber.',
+                    miner: 'Found anything interesting below ground? I always have a use for a little coal.'
+                };
+                document.getElementById('villager-dialogue').innerText = greetings[v.role];
+                this.refreshVillagerTrades();
+                document.getElementById('villager-modal').classList.remove('hidden');
+                if (document.pointerLockElement) document.exitPointerLock();
+            }
+
+            villagerOffers(v) {
+                if (v.role === 'farmer') return [{ need: { 140: 3 }, give: { 141: 1 } }, { need: { 149: 2 }, give: { 150: 1 } }];
+                if (v.role === 'carpenter') return [{ need: { 13: 5 }, give: { 282: 3 } }, { need: { 4: 3 }, give: { 13: 5 } }];
+                return [{ need: { 130: 3 }, give: { 131: 1 } }, { need: { 14: 6 }, give: { 15: 2 } }];
+            }
+
+            refreshVillagerTrades() {
+                const list = document.getElementById('villager-trades');
+                if (!list || !this.activeVillager) return;
+                list.replaceChildren();
+                this.villagerOffers(this.activeVillager).forEach((offer, index) => {
+                    const affordable = Object.entries(offer.need).every(([id, n]) => (this.inv[id] || 0) >= n);
+                    const button = document.createElement('button');
+                    button.className = `w-full flex items-center justify-between gap-3 rounded-xl border px-3 py-3 text-left transition ${affordable ? 'border-emerald-400/25 bg-emerald-950/40 hover:bg-emerald-900/50' : 'border-white/5 bg-black/20 opacity-50'}`;
+                    button.disabled = !affordable;
+                    const names = ids => Object.entries(ids).map(([id, n]) => `${n} ${info(Number(id)).name}`).join(' + ');
+                    const exchange = document.createElement('span');
+                    exchange.className = 'text-sm text-zinc-200';
+                    exchange.textContent = `${names(offer.need)}  →  ${names(offer.give)}`;
+                    const action = document.createElement('span');
+                    action.className = `shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold ${affordable ? 'bg-emerald-600 text-white' : 'bg-zinc-700 text-zinc-400'}`;
+                    action.textContent = affordable ? 'Trade' : 'Need more';
+                    button.append(exchange, action);
+                    button.onclick = () => this.tradeVillager(index);
+                    list.appendChild(button);
+                });
+            }
+
+            tradeVillager(index) {
+                const v = this.activeVillager;
+                if (!v) return;
+                const offer = this.villagerOffers(v)[index];
+                if (!offer || !Object.entries(offer.need).every(([id, n]) => (this.inv[id] || 0) >= n)) {
+                    this.toast('You do not have enough to trade');
+                    return;
+                }
+                Object.entries(offer.need).forEach(([id, n]) => this.spend(Number(id), n));
+                Object.entries(offer.give).forEach(([id, n]) => this.gain(Number(id), n));
+                this.toast(`${v.name} completed the trade`);
+                this.refreshVillagerTrades();
+                this.refreshInventory();
+            }
+
             // ----- Villages -----
             villageAt(vx, vz) {
                 this.vcache = this.vcache || new Map();
@@ -2619,12 +3059,13 @@
             }
 
             buildVillage(cx, cz, hc) {
-                const cells = [], chests = [];
+                const cells = [], chests = [], npcs = [];
                 const set = (x, y, z, id) => cells.push([x, y, z, id]);
                 const OFFS = [[-12, -3], [8, -11], [9, 5], [-6, 9], [-3, -14], [14, -2]];
                 const n = 3 + Math.floor(this.hash(cx, cz, 80) * 4);
                 for (let i = 0; i < n && i < OFFS.length; i++) {
                     const x0 = cx + OFFS[i][0] - 2, z0 = cz + OFFS[i][1] - 2;
+                    npcs.push([x0 + 2, hc + 0.5, z0 + 5.7, i, cx, cz]);
                     for (let dx = -1; dx <= 5; dx++) for (let dz = -1; dz <= 5; dz++) {
                         const x = x0 + dx, z = z0 + dz, inside = dx >= 0 && dx <= 4 && dz >= 0 && dz <= 4;
                         for (let y = hc - 6; y < hc; y++) set(x, y, z, 14);
@@ -2662,7 +3103,7 @@
                 }
                 [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(o => { set(cx + o[0], hc + 2, cz + o[1], 280); set(cx + o[0], hc + 3, cz + o[1], 280); });
                 set(cx + 3, hc + 1, cz + 3, 282); set(cx - 3, hc + 1, cz - 3, 282);
-                return { cells, chests };
+                return { cells, chests, npcs };
             }
 
             applyVillages(cx, cz, ch, put) {
@@ -2680,6 +3121,10 @@
                             if ((c[0] >> 4) !== cx || (c[2] >> 4) !== cz) continue;
                             const k = c.join(',');
                             if (!this.chests.has(k)) this.chests.set(k, this.lootFor(c[0], c[1], c[2]));
+                        }
+                        for (const n of v.npcs) {
+                            if ((Math.floor(n[0]) >> 4) !== cx || (Math.floor(n[2]) >> 4) !== cz) continue;
+                            this.addVillager(n[0], n[1], n[2], `${n[4]},${n[5]},${n[3]}`, n[3]);
                         }
                     }
             }
@@ -2915,15 +3360,18 @@
 
             updateWater(dt) {
                 this.waterT = (this.waterT || 0) + dt;
-                if (this.waterT < 0.2) return;
-                this.waterT = 0;
+                if (this.waterT < 0.12) return;
+                this.waterT -= 0.12;
                 this.waterFrame = (this.waterFrame || 0) + 1;
                 const m = BlockTypes[9].materials, tex = Array.isArray(m) ? m[0] : m;
                 if (!tex || !tex.image || !tex.image.getContext) return;
-                const x = tex.image.getContext('2d'), t = this.waterFrame * 0.5;
+                const x = tex.image.getContext('2d'), t = this.waterFrame * 0.18;
                 for (let i = 0; i < 16; i++) for (let j = 0; j < 16; j++) {
-                    const l = Math.floor((Math.sin((i + t) * 0.8) + Math.sin(j * 1.1 - t * 0.7) + Math.sin((i + j) * 0.5 + t)) * 16);
-                    x.fillStyle = `rgba(${46 + l},${111 + l},${208 + Math.floor(l * 0.6)},0.92)`;
+                    const swell = Math.sin((i * 0.55 + j * 0.22 - t) * 1.15);
+                    const cross = Math.sin((j * 0.48 - i * 0.16 + t * 0.8) * 1.3);
+                    const crest = Math.max(0, Math.sin(i * 0.72 + j * 0.34 - t * 1.7));
+                    const l = Math.floor(swell * 17 + cross * 12 + crest * 16);
+                    x.fillStyle = crest > 0.84 ? `rgba(177,224,244,0.9)` : `rgba(${35 + l},${103 + l},${182 + Math.floor(l * 0.7)},0.88)`;
                     x.fillRect(i, j, 1, 1);
                 }
                 tex.needsUpdate = true;
@@ -3003,7 +3451,16 @@
                 if (this.hand) this.camera.remove(this.hand);
                 const g = new THREE.Group();
                 let mesh;
-                if (held && PixelSprites[held]) {
+                if (held && BlockTypes[held] && BlockTypes[held].flower) {
+                    const b = BlockTypes[held];
+                    if (!this.handFlowerMats) this.handFlowerMats = {};
+                    if (!this.handFlowerMats[held]) this.handFlowerMats[held] = new THREE.MeshBasicMaterial({
+                        map: b.materials, transparent: true, alphaTest: 0.25, side: THREE.DoubleSide, depthTest: false
+                    });
+                    mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.55), this.handFlowerMats[held]);
+                    mesh.rotation.set(0, 0, 0);
+                    g.position.set(0.4, -0.3, -0.7);
+                } else if (held && PixelSprites[held]) {
                     if (!this.handPix) this.handPix = new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, depthTest: false });
                     mesh = new THREE.Mesh(this.pixelGeo(held), this.handPix);
                     mesh.scale.setScalar(1.35);
@@ -3032,7 +3489,10 @@
                 this.swing = Math.max(0, (this.swing || 0) - dt * 4.5);
                 const k = Math.sin(this.swing * Math.PI);
                 this.hand.rotation.x = -k * 0.9;
-                this.hand.position.set(this.handBase.x - k * 0.08, this.handBase.y - k * 0.06, this.handBase.z - k * 0.1);
+                const flowerBob = BlockTypes[this.handId] && BlockTypes[this.handId].flower
+                    ? Math.sin(performance.now() * 0.002) * 0.035
+                    : 0;
+                this.hand.position.set(this.handBase.x - k * 0.08, this.handBase.y + flowerBob - k * 0.06, this.handBase.z - k * 0.1);
             }
 
             itemMat(id) {
@@ -3372,6 +3832,8 @@
                 } else {
                     if (it && it.kind === 'rod') { this.useRod(); return; }
                     if (it && it.kind === 'boat') { this.placeBoat(); return; }
+                    const villager = this.villagerAt(4.5);
+                    if (villager) { this.openVillager(villager); return; }
                     const a = this.animalAt(4);
                     if (a) {
                         if (a.vehicle) { this.mount(a); return; }
@@ -3384,6 +3846,10 @@
                     }
                 }
                 const hit = this.voxelRay(6);
+                if (action === 'place' && hit && (hit.id === 288 || hit.id === 289)) {
+                    this.openSign(`${hit.x},${hit.y},${hit.z}`);
+                    return;
+                }
                 if (action === 'place' && hit && BlockTypes[hit.id].shape === 'door') { this.toggleDoor(hit); return; }
                 if (action === 'place' && hit && hit.id === 30) { this.openChest(`${hit.x},${hit.y},${hit.z}`); return; }
                 if (action === 'place' && hit && hit.id === 33) { this.sleep(hit); return; }
@@ -3432,6 +3898,10 @@
                 this.updateHotbarUI();
                 this.refreshInventory();
 
+                const nightMobsToggle = document.getElementById('toggle-night-mobs');
+                nightMobsToggle.checked = this.nightMobsEnabled;
+                nightMobsToggle.onchange = () => this.setNightMobsEnabled(nightMobsToggle.checked);
+
                 const healthEl = document.getElementById('health-bar');
                 for(let i=0; i<10; i++) {
                     const heart = document.createElement('img'); heart.src = this.ui.heart[2]; heart.className = 'ui-ico'; heart.draggable = false;
@@ -3445,10 +3915,7 @@
                 }
 
                 // Event Bindings
-                document.getElementById('btn-play').onclick = () => {
-                    document.getElementById('splash-screen').classList.add('hidden');
-                    if(!this.isMobile()) document.getElementById('canvas-container').requestPointerLock();
-                };
+                document.getElementById('btn-play').onclick = () => this.startGame();
                 document.getElementById('btn-controls-splash').onclick = () => {
                     document.getElementById('help-modal').classList.remove('hidden');
                 };
@@ -3458,9 +3925,18 @@
                 document.getElementById('close-help').onclick = () => {
                     document.getElementById('help-modal').classList.add('hidden');
                 };
+                document.getElementById('close-villager').onclick = () => {
+                    document.getElementById('villager-modal').classList.add('hidden');
+                    this.activeVillager = null;
+                };
+                document.getElementById('close-sign').onclick = () => {
+                    document.getElementById('sign-modal').classList.add('hidden');
+                    this.activeSignKey = null;
+                };
+                document.getElementById('save-sign').onclick = () => this.saveSign();
                 document.getElementById('start-playing-btn').onclick = () => {
                     document.getElementById('help-modal').classList.add('hidden');
-                    if(!this.isMobile()) document.getElementById('canvas-container').requestPointerLock();
+                    this.startGame();
                 };
                 document.getElementById('btn-inventory-mobile').onclick = () => this.toggleInventory();
                 document.getElementById('close-inventory').onclick = () => this.toggleInventory();
@@ -3470,7 +3946,7 @@
                     localStorage.setItem('craftjs_save_v2', JSON.stringify({
                         edits: Array.from(this.edits), inv: this.inv, hotbar: HotbarItems,
                         pos: [p.x, p.y, p.z], yaw: this.yaw, pitch: this.pitch, health: this.player.health, hunger: this.player.hunger,
-                        tod: this.tod, spawn: this.spawnPos ? [this.spawnPos.x, this.spawnPos.y, this.spawnPos.z] : null, chests: Array.from(this.chests), worn: this.player.worn, tamed: this.animals.filter(q => q.tamed).map(q => [q.type, q.x, q.y, q.z, q.name || '', q.cmd || 'follow'])
+                        tod: this.tod, spawn: this.spawnPos ? [this.spawnPos.x, this.spawnPos.y, this.spawnPos.z] : null, chests: Array.from(this.chests), signs: this.signs, worn: this.player.worn, tamed: this.animals.filter(q => q.tamed).map(q => [q.type, q.x, q.y, q.z, q.name || '', q.cmd || 'follow'])
                     }));
                     alert('World saved successfully!');
                 };
@@ -3481,6 +3957,7 @@
                     Array.from(this.chunks.keys()).forEach(k => this.unloadChunk(k));
                     this.edits = new Map(s.edits);
                     this.inv = s.inv || {};
+                    this.signs = s.signs || {};
                     s.hotbar.forEach((v, i) => { HotbarItems[i] = v; });
                     this.player.position.set(s.pos[0], s.pos[1], s.pos[2]);
                     this.player.velocity.set(0, 0, 0);
@@ -3574,6 +4051,7 @@
 
             stepPhysics(dt, tx, tz) {
                 const p = this.player, c = this.controls;
+                const onLadder = !p.isFlying && this.nearLadder();
                 const a = 1 - Math.exp(-(p.isGrounded || p.isFlying ? 16 : 4) * dt);
                 p.velocity.x += (tx - p.velocity.x) * a;
                 p.velocity.z += (tz - p.velocity.z) * a;
@@ -3581,6 +4059,11 @@
                 if (p.isFlying) {
                     const ty = ((c.jump ? 1 : 0) - (c.down ? 1 : 0)) * p.speed * 1.2;
                     p.velocity.y += (ty - p.velocity.y) * (1 - Math.exp(-12 * dt));
+                } else if (onLadder) {
+                    const climb = (c.jump || c.moveForward ? 1 : 0) - (c.down || c.moveBackward ? 1 : 0);
+                    p.velocity.y = climb * p.speed * 0.8;
+                    p.coyote = 0.1;
+                    p.jumpBuffer = 0;
                 } else {
                     if (this.inWater()) { p.velocity.y = Math.min(3.5, Math.max(p.velocity.y - p.gravity * 0.25 * dt, -3) + (c.jump ? 22 * dt : 0)); }
                     else p.velocity.y = Math.max(p.velocity.y - p.gravity * dt, -50);
@@ -3674,13 +4157,18 @@
                 requestAnimationFrame(() => this.animate());
 
                 const delta = Math.min(this.clock.getDelta(), 0.1);
-                this.updatePlayer(delta);
-                this.updateSurvival(delta);
+                if (this.gameStarted) {
+                    this.updatePlayer(delta);
+                    this.updateSurvival(delta);
+                    this.updateDrops(delta);
+                    this.updateAnimals(delta);
+                    this.updateVillagers(delta);
+                    this.updateCrack();
+                    this.updateHandSwing(delta);
+                } else {
+                    this.updateTitleScreen(delta);
+                }
                 this.updateWorld(delta);
-                this.updateDrops(delta);
-                this.updateAnimals(delta);
-                this.updateCrack();
-                this.updateHandSwing(delta);
                 this.updateExtras(delta);
 
                 this.frameCount++;
