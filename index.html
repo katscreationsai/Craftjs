@@ -473,7 +473,7 @@
                 </div>
                 <div class="flex justify-between gap-3 bg-black/40 p-3 rounded-xl border border-white/5">
                     <span class="font-medium">Water</span>
-                    <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400 text-right">Mine water to collect it; sources refill after 30 seconds</span>
+                    <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400 text-right">Mine water to stack it; float in water; sources refill after 30 seconds</span>
                 </div>
                 <div class="flex justify-between gap-3 bg-black/40 p-3 rounded-xl border border-white/5">
                     <span class="font-medium">Boat and horse</span>
@@ -1086,6 +1086,7 @@
                 this.edits = new Map();
                 this.waterRegrowth = new Map();
                 this.waterRegrowthT = 0;
+                this.isBreathing = true;
                 this.inv = {};
                 this.drops = [];
                 this.animals = [];
@@ -1497,6 +1498,7 @@
                 } else p.starveT = 0;
 
                 const eyeWet = this.getBlock(Math.round(p.position.x), Math.round(p.position.y), Math.round(p.position.z)) === 9;
+                this.isBreathing = !eyeWet || p.isFlying;
                 if (eyeWet && !p.isFlying) {
                     p.air = Math.max(0, p.air - dt);
                     if (p.air <= 0) {
@@ -1509,15 +1511,15 @@
 
             updateVitals() {
                 const p = this.player;
-                const key = p.health + '|' + p.hunger + '|' + Math.ceil(p.air);
+                const key = p.health + '|' + p.hunger + '|' + Math.ceil(p.air) + '|' + (this.isBreathing ? 'breathing' : 'underwater');
                 if (key === this._vk) return;
                 this._vk = key;
                 const fill = (id, val, set) => Array.from(document.getElementById(id).children).forEach((c, i) => { const v = val - i * 2; c.src = set[v >= 2 ? 2 : (v === 1 ? 1 : 0)]; });
                 fill('health-bar', p.health, this.ui.heart);
                 fill('hunger-bar', p.hunger, this.ui.food);
                 const air = document.getElementById('air-bar');
-                if (p.air < 10) { air.classList.remove('hidden'); air.innerHTML = ('<img class="ui-ico" src="' + this.ui.bubble + '">').repeat(Math.ceil(p.air)); }
-                else air.classList.add('hidden');
+                if (!this.isBreathing && p.air < 10) { air.classList.remove('hidden'); air.innerHTML = ('<img class="ui-ico" src="' + this.ui.bubble + '">').repeat(Math.ceil(p.air)); }
+                else { air.classList.add('hidden'); air.innerHTML = ''; }
             }
 
             inWater() {
@@ -3975,7 +3977,7 @@
                         return;
                     }
                 }
-                const hit = this.voxelRay(6, action === 'break');
+                const hit = this.voxelRay(6, action === 'break' || (action === 'place' && held === 9));
                 if (action === 'place' && hit && (hit.id === 288 || hit.id === 289)) {
                     this.openSign(`${hit.x},${hit.y},${hit.z}`);
                     return;
@@ -4005,6 +4007,7 @@
                     if (BlockTypes[id] && BlockTypes[id].shape) { this.placeShape(id, hit); return; }
                     const tx = hit.x + hit.nx, ty = hit.y + hit.ny, tz = hit.z + hit.nz;
                     const cur = this.getBlock(tx, ty, tz);
+                    if (id === 9 && cur === 9) return;
                     if (!this.replaceable(cur)) return;
                     const pos = p.position;
                     const overlap = pos.x + p.radius > tx - 0.5 && pos.x - p.radius < tx + 0.5 &&
@@ -4233,6 +4236,7 @@
             stepPhysics(dt, tx, tz) {
                 const p = this.player, c = this.controls;
                 const onLadder = !p.isFlying && this.nearLadder();
+                const wet = this.inWater();
                 const a = 1 - Math.exp(-(p.isGrounded || p.isFlying ? 16 : 4) * dt);
                 p.velocity.x += (tx - p.velocity.x) * a;
                 p.velocity.z += (tz - p.velocity.z) * a;
@@ -4246,7 +4250,7 @@
                     p.coyote = 0.1;
                     p.jumpBuffer = 0;
                 } else {
-                    if (this.inWater()) { p.velocity.y = Math.min(3.5, Math.max(p.velocity.y - p.gravity * 0.25 * dt, -3) + (c.jump ? 22 * dt : 0)); }
+                    if (wet) { p.velocity.y = Math.min(3.5, Math.max(p.velocity.y + p.gravity * 0.45 * dt, -1.5) + (c.jump ? 22 * dt : 0)); }
                     else p.velocity.y = Math.max(p.velocity.y - p.gravity * dt, -50);
                     p.coyote = p.isGrounded ? 0.1 : p.coyote - dt;
                     p.jumpBuffer -= dt;
@@ -4263,7 +4267,6 @@
                 this.moveAxis('y', p.velocity.y * dt);
 
                 p.isGrounded = p.velocity.y <= 0 && this.collides(p.position.x, p.position.y - 0.04, p.position.z);
-                const wet = this.inWater();
                 if (p.isGrounded || p.isFlying || wet) {
                     const fall = p.fallPeak - p.position.y;
                     if (p.isGrounded && !p.isFlying && !wet && fall > 3.2) this.damage(Math.floor((fall - 3) * (p.worn.feet ? 0.5 : 1)), 'You hit the ground too hard');
