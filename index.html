@@ -143,6 +143,7 @@
         #vitals .ui-ico { flex: 0 1 22px; min-width: 0; width: clamp(14px, 2.7vw, 22px); height: clamp(14px, 2.7vw, 22px); object-fit: contain; }
         #vitals > .w-px { flex: none; height: 20px; }
         #help-modal { z-index: 60; }
+        #world-dialog { z-index: 70; }
         body.title-screen #ui-layer { visibility: hidden; }
         #canvas-container { background: #87ceeb; }
         #canvas-container canvas { display: block; }
@@ -151,26 +152,26 @@
         }
         @media (max-width: 380px) { #vitals { gap: 5px; padding: 3px 6px; } }
 
-        #pet-modal, #villager-modal, #sign-modal, #chest-modal, #inventory-modal, #help-modal {
+        #pet-modal, #villager-modal, #sign-modal, #chest-modal, #inventory-modal, #help-modal, #world-dialog {
             background: rgba(7, 15, 12, 0.82) !important;
             backdrop-filter: blur(5px);
             -webkit-backdrop-filter: blur(5px);
         }
         #pet-modal > div, #villager-modal > div, #sign-modal > div,
-        #chest-modal > div, #inventory-modal > div, #help-modal > div {
+        #chest-modal > div, #inventory-modal > div, #help-modal > div, #world-dialog > div {
             background: linear-gradient(180deg, rgba(36, 47, 34, 0.98), rgba(20, 27, 24, 0.99)) !important;
             border: 4px solid #80633e !important;
             border-radius: 3px !important;
             box-shadow: inset 0 0 0 2px rgba(255, 224, 157, 0.14), 0 8px 0 rgba(0, 0, 0, 0.38), 0 20px 48px rgba(0, 0, 0, 0.62) !important;
         }
-        #villager-modal > div, #inventory-modal > div, #help-modal > div {
+        #villager-modal > div, #inventory-modal > div, #help-modal > div, #world-dialog > div {
             border-color: #4f8a57 !important;
         }
         #sign-modal > div, #chest-modal > div {
             border-color: #a7783e !important;
         }
         #pet-modal button, #villager-modal button, #sign-modal button,
-        #chest-modal button, #inventory-modal button, #help-modal button {
+        #chest-modal button, #inventory-modal button, #help-modal button, #world-dialog button {
             border-radius: 2px;
             border-bottom: 3px solid rgba(0, 0, 0, 0.38);
             font-family: 'VT323', monospace;
@@ -178,13 +179,14 @@
             transition: filter 120ms ease, transform 120ms ease;
         }
         #pet-modal button:hover, #villager-modal button:hover, #sign-modal button:hover,
-        #chest-modal button:hover, #inventory-modal button:hover, #help-modal button:hover {
+        #chest-modal button:hover, #inventory-modal button:hover, #help-modal button:hover, #world-dialog button:hover {
             filter: brightness(1.16);
             transform: translateY(-1px);
         }
         #pet-modal [class*="rounded-"], #villager-modal [class*="rounded-"],
         #sign-modal [class*="rounded-"], #chest-modal [class*="rounded-"],
-        #inventory-modal [class*="rounded-"], #help-modal [class*="rounded-"] {
+        #inventory-modal [class*="rounded-"], #help-modal [class*="rounded-"],
+        #world-dialog [class*="rounded-"] {
             border-radius: 3px !important;
         }
         #pet-modal input, #sign-modal textarea {
@@ -470,6 +472,10 @@
                     <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400 text-right">Rod aimed at water, tap again when it bites</span>
                 </div>
                 <div class="flex justify-between gap-3 bg-black/40 p-3 rounded-xl border border-white/5">
+                    <span class="font-medium">Water</span>
+                    <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400 text-right">Mine water to collect it; sources refill after 30 seconds</span>
+                </div>
+                <div class="flex justify-between gap-3 bg-black/40 p-3 rounded-xl border border-white/5">
                     <span class="font-medium">Boat and horse</span>
                     <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400 text-right">Boat on water, then Place Btn on it to board. Jump to get off</span>
                 </div>
@@ -485,6 +491,20 @@
             <button id="start-playing-btn" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 font-bold rounded-xl transition shadow-lg text-lg">
                 Start Exploring
             </button>
+        </div>
+    </div>
+
+    <div id="world-dialog" class="absolute inset-0 z-40 bg-black/85 backdrop-blur-md flex items-center justify-center hidden pointer-events-auto p-4" role="dialog" aria-modal="true" aria-labelledby="world-dialog-title" aria-describedby="world-dialog-message">
+        <div class="bg-zinc-900/95 border border-emerald-300/20 p-5 sm:p-6 rounded-3xl shadow-2xl w-full max-w-md flex flex-col gap-4">
+            <div class="flex justify-between items-center gap-4">
+                <h2 id="world-dialog-title" class="text-2xl font-extrabold pixel-font tracking-wider text-emerald-300"></h2>
+                <button id="world-dialog-close" class="text-zinc-400 hover:text-white font-bold text-xl px-3 py-1 rounded-lg bg-white/5 hover:bg-white/15 transition" aria-label="Close dialog">✕</button>
+            </div>
+            <p id="world-dialog-message" class="text-sm leading-relaxed text-zinc-300"></p>
+            <div class="flex justify-end gap-2">
+                <button id="world-dialog-cancel" class="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white font-bold text-sm">Cancel</button>
+                <button id="world-dialog-confirm" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-sm"></button>
+            </div>
         </div>
     </div>
 
@@ -820,7 +840,7 @@
         Recipes.push({ out: 280, n: 3, need: { 13: 4 } }, { out: 281, n: 6, need: { 14: 6 } }, { out: 300, n: 1, need: { 13: 6 } }, { out: 308, n: 1, need: { 38: 6 } });
 
         // ----- Ores, farmland, plants, torches -----
-        const DAY_LEN = 420;
+        const DAY_LEN = 420, WATER_REGEN_MS = 30000;
         const oreTx = (col, dark) => tx('#808080', c => { dots(c, 30, 'rgba(0,0,0,0.12)'); dots(c, 20, 'rgba(255,255,255,0.08)'); [[3, 3], [10, 2], [6, 9], [11, 11], [2, 12]].forEach(p => { c.fillStyle = col; c.fillRect(p[0], p[1], 3, 2); c.fillStyle = dark; c.fillRect(p[0] + 1, p[1] + 1, 1, 1); }); });
         addBlock(42, 'Coal Ore', oreTx('#222222', '#000000'), { minTier: 1 });
         addBlock(43, 'Iron Ore', oreTx('#d8a878', '#a87848'), { minTier: 2 });
@@ -1064,6 +1084,8 @@
             initWorld() {
                 this.chunks = new Map();
                 this.edits = new Map();
+                this.waterRegrowth = new Map();
+                this.waterRegrowthT = 0;
                 this.inv = {};
                 this.drops = [];
                 this.animals = [];
@@ -1370,6 +1392,24 @@
                 return v !== undefined ? v : this.virtualAt(x, y, z);
             }
 
+            updateWaterRegrowth(dt) {
+                this.waterRegrowthT -= dt;
+                if (this.waterRegrowthT > 0) return;
+                this.waterRegrowthT = 1;
+                const now = Date.now();
+                for (const [key, deadline] of this.waterRegrowth) {
+                    if (deadline > now) continue;
+                    const [x, y, z] = key.split(',').map(Number);
+                    const chunkKey = Math.floor(x / CH) + ',' + Math.floor(z / CH);
+                    if (!this.chunks.has(chunkKey)) continue;
+                    this.waterRegrowth.delete(key);
+                    if (this.getBlock(x, y, z) === 0) {
+                        this.setBlockAt(x, y, z, 9);
+                        this.toast('A mined water source has refilled');
+                    }
+                }
+            }
+
             updateWorld(dt) {
                 const p = this.player.position;
                 const pcx = Math.floor(Math.round(p.x) / CH), pcz = Math.floor(Math.round(p.z) / CH);
@@ -1391,6 +1431,7 @@
                 }
                 const per = this.touch ? 1 : 2;
                 for (let i = 0; i < per && this.queue.length; i++) { const q = this.queue.shift(); this.genChunk(q[0], q[1]); }
+                this.updateWaterRegrowth(dt);
 
                 const eyeWet = this.getBlock(Math.round(p.x), Math.round(this.camera.position.y), Math.round(p.z)) === 9;
                 if (eyeWet !== this.eyeWet) {
@@ -2190,7 +2231,7 @@
                 }
             }
 
-            voxelRay(maxDist) {
+            voxelRay(maxDist, includeWater = false) {
                 const o = this.camera.position.clone().addScalar(0.5);
                 const d = new THREE.Vector3(); this.camera.getWorldDirection(d);
                 let x = Math.floor(o.x), y = Math.floor(o.y), z = Math.floor(o.z);
@@ -2202,7 +2243,7 @@
                 let nx = 0, ny = 0, nz = 0, t = 0;
                 while (t <= maxDist) {
                     const id = this.getBlock(x, y, z);
-                    if (id !== 0 && id !== 9) return { x, y, z, nx, ny, nz, id, t, hx: o.x + d.x * t - 0.5, hy: o.y + d.y * t - 0.5, hz: o.z + d.z * t - 0.5 };
+                    if (id !== 0 && (id !== 9 || includeWater)) return { x, y, z, nx, ny, nz, id, t, hx: o.x + d.x * t - 0.5, hy: o.y + d.y * t - 0.5, hz: o.z + d.z * t - 0.5 };
                     if (tx <= ty && tx <= tz) { x += sx; t = tx; tx += td(d.x); nx = -sx; ny = 0; nz = 0; }
                     else if (ty <= tz) { y += sy; t = ty; ty += td(d.y); nx = 0; ny = -sy; nz = 0; }
                     else { z += sz; t = tz; tz += td(d.z); nx = 0; ny = 0; nz = -sz; }
@@ -3813,6 +3854,7 @@
                 const hb = BlockTypes[hit.id];
                 this.spawnParticles(hit.x, hit.y, hit.z, this.blockColor(hit.id), 14, 2.4, 0.1);
                 this.setBlockAt(hit.x, hit.y, hit.z, 0);
+                if (hit.id === 9) this.waterRegrowth.set(key, Date.now() + WATER_REGEN_MS);
                 if (hb && hb.shape === 'door') this.setBlockAt(hit.x, (hb.state & 1) ? hit.y - 1 : hit.y + 1, hit.z, 0);
                 this.dropsFor(hit.id).forEach(d => this.spawnDrop(hit.x, hit.y, hit.z, d[0], d[1]));
                 if (hit.id === 1 && Math.random() < 0.35) this.spawnDrop(hit.x, hit.y + 0.3, hit.z, 111);
@@ -3823,6 +3865,7 @@
                 }
                 this.player.blocksMined++;
                 document.getElementById('stats-mined').innerText = this.player.blocksMined;
+                if (hit.id === 9) this.toast('Water collected; this source refills in 30 seconds');
                 this.crack.visible = false; this.mine.key = null; this.mine.hits = 0;
             }
 
@@ -3932,7 +3975,7 @@
                         return;
                     }
                 }
-                const hit = this.voxelRay(6);
+                const hit = this.voxelRay(6, action === 'break');
                 if (action === 'place' && hit && (hit.id === 288 || hit.id === 289)) {
                     this.openSign(`${hit.x},${hit.y},${hit.z}`);
                     return;
@@ -4028,21 +4071,70 @@
                 document.getElementById('btn-inventory-mobile').onclick = () => this.toggleInventory();
                 document.getElementById('close-inventory').onclick = () => this.toggleInventory();
 
+                const worldDialog = document.getElementById('world-dialog');
+                const worldDialogTitle = document.getElementById('world-dialog-title');
+                const worldDialogMessage = document.getElementById('world-dialog-message');
+                const worldDialogClose = document.getElementById('world-dialog-close');
+                const worldDialogCancel = document.getElementById('world-dialog-cancel');
+                const worldDialogConfirm = document.getElementById('world-dialog-confirm');
+                const closeWorldDialog = () => worldDialog.classList.add('hidden');
+                const showWorldDialog = (title, message, confirmLabel, onConfirm) => {
+                    worldDialogTitle.textContent = title;
+                    worldDialogMessage.textContent = message;
+                    worldDialogConfirm.textContent = confirmLabel || '';
+                    worldDialogConfirm.classList.toggle('hidden', !onConfirm);
+                    worldDialogCancel.textContent = onConfirm ? 'Cancel' : 'Close';
+                    worldDialogConfirm.onclick = onConfirm || null;
+                    worldDialogCancel.onclick = closeWorldDialog;
+                    worldDialog.classList.remove('hidden');
+                    if (document.pointerLockElement) document.exitPointerLock();
+                };
+                worldDialogClose.onclick = closeWorldDialog;
+
                 const saveFn = () => {
                     const p = this.player.position;
-                    localStorage.setItem('craftjs_save_v2', JSON.stringify({
+                    const save = JSON.stringify({
                         edits: Array.from(this.edits), inv: this.inv, hotbar: HotbarItems,
                         pos: [p.x, p.y, p.z], yaw: this.yaw, pitch: this.pitch, health: this.player.health, hunger: this.player.hunger,
-                        tod: this.tod, spawn: this.spawnPos ? [this.spawnPos.x, this.spawnPos.y, this.spawnPos.z] : null, chests: Array.from(this.chests), signs: this.signs, worn: this.player.worn, tamed: this.animals.filter(q => q.tamed).map(q => [q.type, q.x, q.y, q.z, q.name || '', q.cmd || 'follow'])
-                    }));
-                    alert('World saved successfully!');
+                        tod: this.tod, spawn: this.spawnPos ? [this.spawnPos.x, this.spawnPos.y, this.spawnPos.z] : null, chests: Array.from(this.chests), signs: this.signs, worn: this.player.worn, tamed: this.animals.filter(q => q.tamed).map(q => [q.type, q.x, q.y, q.z, q.name || '', q.cmd || 'follow']),
+                        waterRegrowth: Array.from(this.waterRegrowth)
+                    });
+                    try {
+                        localStorage.setItem('craftjs_save_v2', save);
+                    } catch (error) {
+                        console.error('Unable to save world', error);
+                        showWorldDialog('SAVE FAILED', 'Your browser could not save this world. Check available storage or browser privacy settings.', null, null);
+                        return;
+                    }
+                    showWorldDialog('WORLD SAVED', 'Your world and mined-water refill timers have been saved.', null, null);
                 };
                 const loadFn = () => {
-                    const raw = localStorage.getItem('craftjs_save_v2');
-                    if (!raw) { alert('No saved world found.'); return; }
-                    const s = JSON.parse(raw);
+                    let raw;
+                    try {
+                        raw = localStorage.getItem('craftjs_save_v2');
+                    } catch (error) {
+                        console.error('Unable to read saved world', error);
+                        showWorldDialog('LOAD FAILED', 'Your browser could not read the saved world. Check browser storage permissions.', null, null);
+                        return;
+                    }
+                    if (!raw) { showWorldDialog('NO SAVED WORLD', 'There is no saved world to load yet.', null, null); return; }
+                    let s;
+                    try {
+                        s = JSON.parse(raw);
+                    } catch (error) {
+                        console.error('Saved world data is invalid', error);
+                        showWorldDialog('LOAD FAILED', 'The saved world data is damaged and could not be loaded.', null, null);
+                        return;
+                    }
+                    if (!s || !Array.isArray(s.edits) || !Array.isArray(s.hotbar) ||
+                        !Array.isArray(s.pos) || s.pos.length !== 3 ||
+                        !Array.isArray(s.chests) || !Array.isArray(s.tamed)) {
+                        showWorldDialog('LOAD FAILED', 'The saved world is incomplete or not compatible with this version.', null, null);
+                        return;
+                    }
                     Array.from(this.chunks.keys()).forEach(k => this.unloadChunk(k));
                     this.edits = new Map(s.edits);
+                    this.waterRegrowth = new Map(Array.isArray(s.waterRegrowth) ? s.waterRegrowth : []);
                     this.inv = s.inv || {};
                     this.signs = s.signs || {};
                     s.hotbar.forEach((v, i) => { HotbarItems[i] = v; });
@@ -4061,13 +4153,15 @@
                     this.camera.rotation.set(this.pitch, this.yaw, 0, 'YXZ');
                     this.updateHotbarUI();
                     this.refreshInventory();
-                    alert('World loaded successfully!');
+                    showWorldDialog('WORLD LOADED', 'Your saved world is ready to explore.', null, null);
                 };
 
-                document.getElementById('btn-save').onclick = saveFn;
-                document.getElementById('btn-load').onclick = loadFn;
-                document.getElementById('modal-save').onclick = saveFn;
-                document.getElementById('modal-load').onclick = loadFn;
+                const requestSave = () => showWorldDialog('SAVE WORLD', 'Save your current progress so you can return to this world later?', 'Save World', saveFn);
+                const requestLoad = () => showWorldDialog('LOAD WORLD', 'Loading a saved world replaces your current unsaved progress. Continue?', 'Load World', loadFn);
+                document.getElementById('btn-save').onclick = requestSave;
+                document.getElementById('btn-load').onclick = requestLoad;
+                document.getElementById('modal-save').onclick = requestSave;
+                document.getElementById('modal-load').onclick = requestLoad;
             }
 
             updateHotbarUI() {
