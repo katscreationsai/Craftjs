@@ -366,7 +366,7 @@
                 </div>
                 <div class="flex justify-between bg-black/40 p-3 rounded-xl border border-white/5">
                     <span class="font-medium">Look Around</span>
-                    <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400">Touch Drag / Mouse (click-drag if needed)</span>
+                    <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400">Touch Drag / Move Mouse; click game to capture</span>
                 </div>
                 <div class="flex justify-between bg-black/40 p-3 rounded-xl border border-white/5">
                     <span class="font-medium">Jump</span>
@@ -460,7 +460,7 @@
         <div class="flex-1"></div>
         <div class="flex flex-col space-y-3 w-full max-w-sm pb-8 pointer-events-auto">
             <button id="btn-play" class="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl shadow-[0_10px_25px_rgba(5,150,105,0.4)] hover:scale-105 active:scale-95 transition-all text-xl border border-emerald-400/40">
-                Play Now
+                Play Fullscreen
             </button>
             <button id="btn-controls-splash" class="w-full py-3.5 bg-zinc-900/80 hover:bg-zinc-800/90 backdrop-blur-md text-zinc-200 font-semibold rounded-2xl transition-all text-sm border border-white/15 shadow-xl">
                 How to Play
@@ -1850,7 +1850,10 @@
             }
 
             startGame() {
-                if (this.gameStarted) return;
+                if (this.gameStarted) {
+                    this.requestImmersiveMode();
+                    return;
+                }
                 this.gameStarted = true;
                 document.body.classList.remove('title-screen');
                 const splash = document.getElementById('splash-screen');
@@ -1860,20 +1863,62 @@
                 this.yaw = 0;
                 this.pitch = 0;
                 this.camera.rotation.set(this.pitch, this.yaw, 0, 'YXZ');
+                this.requestImmersiveMode(false);
+            }
+
+            requestImmersiveMode(captureMouse = true) {
+                if (this.isMobile()) return;
+                if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+                    const request = document.documentElement.requestFullscreen();
+                    if (request && typeof request.catch === 'function') {
+                        request.catch(error => {
+                            console.error('Fullscreen request failed', error);
+                            this.toast('Fullscreen unavailable; press F11 to expand the game');
+                        });
+                    }
+                } else if (!document.fullscreenElement && !document.documentElement.requestFullscreen) {
+                    this.toast('Fullscreen unavailable; press F11 to expand the game');
+                }
+                if (captureMouse && !this.pointerLockUnavailable && !document.pointerLockElement && this.renderer.domElement.requestPointerLock) {
+                    const request = this.renderer.domElement.requestPointerLock();
+                    if (request && typeof request.catch === 'function') {
+                        request.catch(error => {
+                            console.error('Pointer lock request failed', error);
+                            if (error && error.name === 'WrongDocumentError') {
+                                this.pointerLockUnavailable = true;
+                                this.toast('This browser preview blocks mouse capture; open the game in a browser window');
+                                return;
+                            }
+                            this.toast('Mouse capture failed; click the game to retry');
+                        });
+                    }
+                }
             }
 
             initEvents() {
                 const canvas = this.renderer.domElement;
                 this.fallbackLookX = null;
                 this.fallbackLookY = null;
+                document.addEventListener('pointerlockchange', () => {
+                    this.controls.isLocked = document.pointerLockElement === canvas;
+                    this.fallbackLookX = null;
+                    this.fallbackLookY = null;
+                    if (this.controls.isLocked) this.toast('Mouse captured; press Esc to release');
+                });
                 
                 // Keep the cursor free so laptop trackpads can look, walk, and click together.
                 canvas.addEventListener('click', (e) => {
-                    if (this.gameStarted && !this.isMobile()) this.pickDropAt((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1, 0.5, 6);
+                    if (!this.gameStarted || this.isMobile()) return;
+                    if (!document.fullscreenElement || !document.pointerLockElement) this.requestImmersiveMode();
+                    if (!document.pointerLockElement) this.pickDropAt((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1, 0.5, 6);
                 });
 
                 // Mouse Look (Desktop)
                 document.addEventListener('mousemove', (e) => {
+                    if (this.controls.isLocked) {
+                        this.rotateCamera(e.movementX, e.movementY);
+                        return;
+                    }
                     const rect = canvas.getBoundingClientRect();
                     const insideCanvas = e.clientX >= rect.left && e.clientX <= rect.right &&
                         e.clientY >= rect.top && e.clientY <= rect.bottom;
@@ -1895,7 +1940,8 @@
 
                 // Mouse actions
                 window.addEventListener('mousedown', (e) => {
-                    if (this.isMobile() || !this.gameStarted || (e.target !== canvas && e.target !== this.container)) return;
+                    if (this.isMobile() || !this.gameStarted ||
+                        (!this.controls.isLocked && e.target !== canvas && e.target !== this.container)) return;
                     if (e.button === 0) {
                         const pickedUpDrop = this.pickDropAt((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1, 0.5, 6);
                         if (!pickedUpDrop) this.handleRaycastAction('break');
