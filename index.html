@@ -337,6 +337,22 @@
             <div id="chest-inv" class="grid grid-cols-5 sm:grid-cols-6 gap-2 bg-black/40 p-3 rounded-2xl border border-white/10 min-h-[80px]"></div>
         </div>
     </div>
+    <div id="furnace-modal" class="absolute inset-0 z-40 bg-black/85 backdrop-blur-md flex items-center justify-center hidden pointer-events-auto p-4">
+        <div class="bg-zinc-900/95 border border-white/20 p-5 rounded-3xl shadow-2xl w-full max-w-xl flex flex-col space-y-3 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-extrabold pixel-font tracking-wider text-orange-400">FURNACE</h2>
+                <button id="close-furnace" class="text-zinc-400 hover:text-white font-bold text-xl px-3 py-1 rounded-lg bg-white/5 hover:bg-white/15 transition">✕</button>
+            </div>
+            <div class="grid grid-cols-3 gap-3 text-center">
+                <div><div class="text-xs text-zinc-400 mb-1">INPUT</div><div id="furnace-input" class="min-h-16 p-2 bg-black/40 border border-white/10 rounded-xl"></div></div>
+                <div><div class="text-xs text-zinc-400 mb-1">FUEL</div><div id="furnace-fuel" class="min-h-16 p-2 bg-black/40 border border-white/10 rounded-xl"></div></div>
+                <div><div class="text-xs text-zinc-400 mb-1">OUTPUT</div><div id="furnace-output" class="min-h-16 p-2 bg-black/40 border border-white/10 rounded-xl"></div></div>
+            </div>
+            <div class="h-2 rounded bg-black/50 overflow-hidden"><div id="furnace-progress" class="h-full bg-orange-400 transition-all" style="width:0%"></div></div>
+            <div class="text-xs text-zinc-400">Tap an item to add it to the input or fuel slot. Tap slots to take items.</div>
+            <div id="furnace-inv" class="grid grid-cols-5 sm:grid-cols-6 gap-2 bg-black/40 p-3 rounded-xl border border-white/10 min-h-[70px]"></div>
+        </div>
+    </div>
     <div id="damage-flash"></div>
     <div id="toast" class="pixel-font"></div>
 
@@ -849,6 +865,14 @@
         const metalTx = (a, hi, lo) => tx(a, c => { c.fillStyle = hi; c.fillRect(1, 1, 14, 2); c.fillRect(1, 1, 2, 14); c.fillStyle = lo; c.fillRect(1, 13, 14, 2); c.fillRect(13, 1, 2, 14); dots(c, 10, 'rgba(255,255,255,0.3)'); });
         addBlock(46, 'Gold Block', metalTx('#f2c230', '#fff08a', '#b88a10'));
         addBlock(47, 'Iron Block', metalTx('#d8d8d8', '#ffffff', '#9aa0a6'));
+        const furnaceSide = tx('#55514a', c => {
+            c.fillStyle = '#252321'; c.fillRect(2, 2, 12, 12);
+            c.fillStyle = '#f28c28'; c.fillRect(5, 5, 6, 6);
+            c.fillStyle = '#ffd56a'; c.fillRect(7, 6, 2, 4);
+            c.fillStyle = '#8b8780'; c.fillRect(0, 0, 16, 1); c.fillRect(0, 15, 16, 1);
+        });
+        addBlock(54, 'Furnace', [furnaceSide, furnaceSide, T.cobble, T.cobble, furnaceSide, furnaceSide]);
+        STONE_SET.add(54);
         const farmTop = tx('#4a2f18', c => { for (let y = 2; y < 16; y += 4) { c.fillStyle = '#3a2210'; c.fillRect(0, y, 16, 1); c.fillStyle = '#5e3c1e'; c.fillRect(0, y + 1, 16, 1); } dots(c, 12, 'rgba(0,0,0,0.15)'); });
         addBlock(48, 'Farmland', [Textures.dirt, Textures.dirt, farmTop, Textures.dirt, Textures.dirt, Textures.dirt]);
         const crossTx = fn => createPixelTexture(c => fn(c));
@@ -919,7 +943,6 @@
         Object.assign(PixelSprites, {"130": {"grid": ["................", "................", "................", "................", "....ooo...oo....", "...ohcco.occo...", "...occcooooco...", "...occcohcco....", "....ooooccco....", "....ohccccco....", "....occcooo.....", "....occco.......", ".....ooo........", "................", "................", "................"], "pal": {"o": "#111111", "c": "#2a2a2a", "h": "#555555"}}, "131": {"grid": ["................", "................", "................", "................", "................", ".....ooooooooo..", "....ohhhhhhhhdo.", "...ommmmmmmmdo..", "..ommmmmmmmdo...", ".ommmmmmmmdo....", "..ooooooooo.....", "................", "................", "................", "................", "................"], "pal": {"o": "#3a3a3a", "m": "#dcdcdc", "h": "#ffffff", "d": "#a0a0a0"}}, "132": {"grid": ["................", "................", "................", "................", "................", ".....ooooooooo..", "....ohhhhhhhhdo.", "...ommmmmmmmdo..", "..ommmmmmmmdo...", ".ommmmmmmmdo....", "..ooooooooo.....", "................", "................", "................", "................", "................"], "pal": {"o": "#5a4200", "m": "#f2c230", "h": "#fff08a", "d": "#c28f10"}}, "133": {"grid": ["................", "................", "................", "......oooo......", "....oommmmoo....", "...ommhhmmmmo...", "..ommhhmmmmmmo..", "...ommmmmmdmo...", "....ommmmdmo....", ".....ommmdo.....", "......omdo......", ".......oo.......", "................", "................", "................", "................"], "pal": {"o": "#0b4a4a", "m": "#4de0e0", "h": "#c8fffa", "d": "#27a3a3"}}, "135": {"grid": ["................", ".......oooo.....", "......ogggho....", ".....oghhhhho...", "....ohhoooohho..", "...ohho..ooohho.", "....oo..owvooho.", ".......owvo..o..", "......owvo......", ".....owvo.......", "....owvo........", "...owvo.........", "..owvo..........", ".owvo...........", "owvo............", ".oo............."], "pal": {"w": "#8b5a2b", "v": "#6b4220", "o": "#24160a", "h": "#d8d8d8", "g": "#ffffff", "c": "#9aa3ad", "m": "#d8d8d8", "d": "#9aa0a6"}}, "136": {"grid": ["................", "........ooo.....", ".......oggho....", "......ogghhho...", "......oghhhhho..", ".......oohhhho..", "........owhho...", ".......owvoo....", "......owvo......", ".....owvo.......", "....owvo........", "...owvo.........", "..owvo..........", ".owvo...........", "owvo............", ".oo............."], "pal": {"w": "#8b5a2b", "v": "#6b4220", "o": "#24160a", "h": "#d8d8d8", "g": "#ffffff", "c": "#9aa3ad", "m": "#d8d8d8", "d": "#9aa0a6"}}, "137": {"grid": ["................", "................", "............oo..", "...........ohho.", "..........ohho..", ".........ohho...", "........ohho....", ".......ohho.....", "....ooohho......", "...occhho.......", "..occcho........", ".occhho.........", ".oowco..........", "ovwoo...........", "ovvo............", ".oo............."], "pal": {"o": "#24160a", "h": "#d8d8d8", "g": "#ffffff", "c": "#8b5a2b", "w": "#8b5a2b", "v": "#6b4220"}}, "138": {"grid": ["................", ".......oooo.....", "......ogggho....", ".....oghhhhho...", "....ohhoooohho..", "...ohho..ooohho.", "....oo..owvooho.", ".......owvo..o..", "......owvo......", ".....owvo.......", "....owvo........", "...owvo.........", "..owvo..........", ".owvo...........", "owvo............", ".oo............."], "pal": {"w": "#8b5a2b", "v": "#6b4220", "o": "#24160a", "h": "#4de0e0", "g": "#b8fff8", "c": "#2aa7a7", "m": "#4de0e0", "d": "#2aa7a7"}}, "139": {"grid": ["................", "................", "............oo..", "...........ohho.", "..........ohho..", ".........ohho...", "........ohho....", ".......ohho.....", "....ooohho......", "...occhho.......", "..occcho........", ".occhho.........", ".oowco..........", "ovwoo...........", "ovvo............", ".oo............."], "pal": {"o": "#0b3a3a", "h": "#4de0e0", "g": "#c8fffa", "c": "#8b5a2b", "w": "#8b5a2b", "v": "#6b4220"}}, "140": {"grid": ["................", "....o...o...o...", "...omo.omo.omo..", "...omo.omo.omo..", "..ommhommhommho.", "..omsmomsmomsmo.", "...oso.oso.oso..", "...oso.oso.oso..", "...oso.oso.oso..", "...oso.oso.oso..", "..oso.oso.oso...", "..oso.oso.oso...", "..oso.oso.oso...", "..oso.oso.oso...", "..oso.oso.oso...", "...o...o...o...."], "pal": {"o": "#4a3a10", "s": "#b79a3a", "m": "#e3c15a", "h": "#f6e08a"}}, "141": {"grid": ["................", "................", "................", "................", "....oooooooo....", "..oommmmmmmmoo..", ".ommhhmmhhmmmmo.", "ommmmmmmmmmmmmmo", "ommmmmmmmmmmmmmo", ".ommmhmmmmmmmmo.", "..oddddddddddo..", "...oooooooooo...", "................", "................", "................", "................"], "pal": {"o": "#3b2410", "m": "#c98b3f", "h": "#e6b062", "d": "#8f5a22"}}, "142": {"grid": ["................", "................", "................", ".......oo.......", "......ommo......", ".....ommmmo.....", "....omhmmmmo....", "....omhmmmmo....", "....ommmmmmo....", "....ommmmdmo....", ".....ommmdo.....", "......omdo......", ".......oo.......", "................", "................", "................"], "pal": {"o": "#6b5a3a", "m": "#f3ead2", "h": "#ffffff", "d": "#cdbf9d"}}, "143": {"grid": ["................", "................", "..ooo......ooo..", ".ommmo....ommmo.", "..omoooooooomo..", "...ohhhhhhhho...", "...ommmmmmmmo...", "...ommmmmmmmo...", "...omgmmmmmmo...", "....ogmmmmmo....", "....ogmmmmmo....", "....ommmmmmo....", "....ommmmmmo....", ".....oooooo.....", "................", "................"], "pal": {"o": "#2a2a2a", "m": "#a9b0b8", "h": "#d8dde2", "g": "#d8dde2"}}, "144": {"grid": ["................", "................", "..ooo......ooo..", ".ommmoooooommmo.", "..omkkkkkkkkmo..", "...okkkkkkkko...", "...okkkkkkkko...", "...okkkkkkkko...", "...omgmmmmmmo...", "....ogmmmmmo....", "....ogmmmmmo....", "....ommmmmmo....", "....ommmmmmo....", ".....oooooo.....", "................", "................"], "pal": {"o": "#2a2a2a", "m": "#a9b0b8", "h": "#d8dde2", "g": "#d8dde2", "k": "#ffffff"}}, "145": {"grid": ["................", "................", ".......ooooo....", "......ohgggho...", "......ohhooho...", "......ohhowvo...", ".......oowvo....", ".......owvo.....", "......owvo......", ".....owvo.......", "....owvo........", "...owvo.........", "..owvo..........", ".owvo...........", "owvo............", ".oo............."], "pal": {"w": "#8b5a2b", "v": "#6b4220", "o": "#24160a", "h": "#b8894f", "g": "#d6a96c"}}, "146": {"grid": ["................", "................", ".......ooooo....", "......ohgggho...", "......ohhooho...", "......ohhowvo...", ".......oowvo....", ".......owvo.....", "......owvo......", ".....owvo.......", "....owvo........", "...owvo.........", "..owvo..........", ".owvo...........", "owvo............", ".oo............."], "pal": {"w": "#8b5a2b", "v": "#6b4220", "o": "#24160a", "h": "#8d8d8d", "g": "#c4c4c4"}}, "147": {"grid": ["................", "................", ".......ooooo....", "......ohgggho...", "......ohhooho...", "......ohhowvo...", ".......oowvo....", ".......owvo.....", "......owvo......", ".....owvo.......", "....owvo........", "...owvo.........", "..owvo..........", ".owvo...........", "owvo............", ".oo............."], "pal": {"w": "#8b5a2b", "v": "#6b4220", "o": "#24160a", "h": "#d8d8d8", "g": "#ffffff"}}, "148": {"grid": ["................", "................", "................", "...........oo...", "..........owso..", ".........owvso..", "........owvoso..", ".......owvo.oso.", "......owvo..oso.", ".....owvo...oso.", "....owvo...orro.", "...owvo.....oo..", "..owvo..........", ".owvo...........", "owvo............", ".oo............."], "pal": {"w": "#8b5a2b", "v": "#6b4220", "o": "#24160a", "s": "#e8e8e8", "r": "#d63a32"}}, "149": {"grid": ["................", "................", "................", "..............o.", ".....ooooo...oto", "...oommmmmoooto.", "..ommmhhhhmmtto.", ".ommeemmmmmmtto.", ".ommmmddddmmtto.", "..ommmmmmmmmooto", "...oommmmmoo..o.", ".....ooooo......", "................", "................", "................", "................"], "pal": {"o": "#1f3a4a", "m": "#6fa3c9", "h": "#a9d0e8", "d": "#4a7da3", "t": "#4a7da3", "e": "#111111"}}, "150": {"grid": ["................", "................", "................", "..............o.", ".....ooooo...oto", "...oommmmmoooto.", "..ommmhhhhmmtto.", ".ommeemmmmmmtto.", ".ommmmddddmmtto.", "..ommmmmmmmmooto", "...oommmmmoo..o.", ".....ooooo......", "................", "................", "................", "................"], "pal": {"o": "#3b2410", "m": "#b87a38", "h": "#d9a05a", "d": "#8a5420", "t": "#8a5420", "e": "#111111"}}, "151": {"grid": ["................", ".......oooo.....", "......oppppo....", "......oppppo....", "......oppppo....", ".o.ooo.oooo...o.", "owopppo......owo", "owwoooooooooowwo", "owwwwwwwwwwwwwwo", ".owwwwwwwwwwwwo.", ".ovvvvvvvvvvvvo.", "..oooooooooooo..", "................", "................", "................", "................"], "pal": {"o": "#24160a", "w": "#a8743a", "v": "#6b4220", "p": "#d6a96c"}}});
         Recipes.push(
             { out: 282, n: 4, need: { 130: 1, 13: 1 } }, { out: 283, n: 1, need: { 13: 3, 130: 1 } },
-            { out: 131, n: 2, need: { 43: 1, 130: 1 } }, { out: 132, n: 2, need: { 44: 1, 130: 1 } },
             { out: 46, n: 1, need: { 132: 4 } }, { out: 47, n: 1, need: { 131: 4 } },
             { out: 135, n: 1, need: { 131: 3, 13: 2 } }, { out: 136, n: 1, need: { 131: 3, 13: 2 } }, { out: 137, n: 1, need: { 131: 2, 13: 1 } },
             { out: 138, n: 1, need: { 133: 3, 13: 2 } }, { out: 139, n: 1, need: { 133: 2, 13: 1 } },
@@ -927,6 +950,53 @@
             { out: 145, n: 1, need: { 13: 2 } }, { out: 146, n: 1, need: { 13: 2, 14: 2 } }, { out: 147, n: 1, need: { 13: 2, 131: 2 } },
             { out: 148, n: 1, need: { 13: 3, 110: 2 } }, { out: 151, n: 1, need: { 13: 5 } }, { out: 150, n: 1, need: { 149: 1, 4: 1 } }
         );
+        Object.assign(ItemTypes, {
+            152: { name: 'Iron Helmet', icon: '⛑', kind: 'wear', slot: 'head', armor: 2, durability: 160 },
+            153: { name: 'Iron Chestplate', icon: '🛡', kind: 'wear', slot: 'body', armor: 6, durability: 240 },
+            154: { name: 'Iron Leggings', icon: '🛡', kind: 'wear', slot: 'legs', armor: 5, durability: 225 },
+            155: { name: 'Iron Boots', icon: '🥾', kind: 'wear', slot: 'feet', armor: 2, durability: 190 },
+            156: { name: 'Diamond Helmet', icon: '⛑', kind: 'wear', slot: 'head', armor: 3, durability: 360 },
+            157: { name: 'Diamond Chestplate', icon: '🛡', kind: 'wear', slot: 'body', armor: 8, durability: 528 },
+            158: { name: 'Diamond Leggings', icon: '🛡', kind: 'wear', slot: 'legs', armor: 6, durability: 495 },
+            159: { name: 'Diamond Boots', icon: '🥾', kind: 'wear', slot: 'feet', armor: 3, durability: 429 },
+            160: { name: 'Gold Helmet', icon: '⛑', kind: 'wear', slot: 'head', armor: 2, durability: 100 },
+            161: { name: 'Gold Chestplate', icon: '🛡', kind: 'wear', slot: 'body', armor: 5, durability: 160 },
+            162: { name: 'Gold Leggings', icon: '🛡', kind: 'wear', slot: 'legs', armor: 3, durability: 150 },
+            163: { name: 'Gold Boots', icon: '🥾', kind: 'wear', slot: 'feet', armor: 1, durability: 130 },
+            164: { name: 'Gold Axe', icon: '🪓', kind: 'axe', tier: 3, dmg: 5, durability: 96 },
+            165: { name: 'Gold Hoe', icon: '⚒', kind: 'hoe', tier: 3, durability: 48 },
+            166: { name: 'Gold Pickaxe', icon: '⛏', kind: 'pick', tier: 3, dmg: 3, durability: 96 },
+            167: { name: 'Gold Sword', icon: '⚔', kind: 'sword', dmg: 6, durability: 96 },
+            168: { name: 'Diamond Axe', icon: '🪓', kind: 'axe', tier: 4, dmg: 7, durability: 1561 },
+            169: { name: 'Diamond Hoe', icon: '⚒', kind: 'hoe', tier: 4, durability: 1561 }
+        });
+        [100, 101, 102, 103, 104, 105, 135, 136, 137, 138, 139, 145, 146, 147, 148].forEach(id => {
+            if (ItemTypes[id] && !ItemTypes[id].durability) ItemTypes[id].durability = id === 105 || id === 148 ? 384 : 60 + (ItemTypes[id].tier || 1) * 60;
+        });
+        const armorRecipes = [
+            [152, 131], [153, 131], [154, 131], [155, 131],
+            [156, 133], [157, 133], [158, 133], [159, 133],
+            [160, 132], [161, 132], [162, 132], [163, 132], [170, 109]
+        ];
+        armorRecipes.forEach(([out, material], i) => {
+            const pieces = material === 109 ? 7 : (i % 4 === 0 ? 5 : (i % 4 === 1 ? 8 : (i % 4 === 2 ? 7 : 4)));
+            Recipes.push({ out, n: 1, need: { [material]: pieces } });
+        });
+        Recipes.push(
+            { out: 54, n: 1, need: { 14: 8 } },
+            { out: 164, n: 1, need: { 132: 3, 13: 2 } },
+            { out: 165, n: 1, need: { 132: 2, 13: 2 } },
+            { out: 166, n: 1, need: { 132: 3, 13: 2 } },
+            { out: 167, n: 1, need: { 132: 2, 13: 1 } },
+            { out: 168, n: 1, need: { 133: 3, 13: 2 } },
+            { out: 169, n: 1, need: { 133: 2, 13: 2 } }
+        );
+        Object.assign(ItemTypes, {
+            113: Object.assign(ItemTypes[113], { armor: 1, durability: 80 }),
+            114: Object.assign(ItemTypes[114], { armor: 2, durability: 120 }),
+            115: Object.assign(ItemTypes[115], { armor: 1, durability: 80 }),
+            170: { name: 'Leather Leggings', icon: '🛡', kind: 'wear', slot: 'legs', armor: 2, durability: 105 }
+        });
         const COOKABLE = { 107: 108, 116: 117, 118: 119, 120: 121, 149: 150 };
         const BreedFood = { pig: [140, 112], cow: [140], sheep: [140], chicken: [111], rabbit: [112], horse: [112, 140], wolf: 'meat' };
         const HotbarItems = Array(9).fill(null);
@@ -1134,7 +1204,15 @@
                 tick();
             }
 
-            stopTitleMusic() {
+            stopTitleMusic(delay = 0) {
+                if (this.titleMusicStopTimer) clearTimeout(this.titleMusicStopTimer);
+                if (delay > 0) {
+                    this.titleMusicStopTimer = setTimeout(() => {
+                        this.titleMusicStopTimer = null;
+                        this.stopTitleMusic();
+                    }, delay);
+                    return;
+                }
                 this.titleMusicWanted = false;
                 if (this.titleMusicTimer !== null) {
                     clearTimeout(this.titleMusicTimer);
@@ -1186,6 +1264,10 @@
                     case 'splash': this.noise(0.42, 1500, 300, 0.095); this.tone(260, 0.35, 'sine', 0.055, 90); break;
                     case 'swim': this.noise(0.24, 850, 260, 0.035); break;
                     case 'drip': this.tone(920 + r() * 650, 0.42, 'sine', 0.035, 360); break;
+                    case 'thunder':
+                        this.noise(2.4, 110, 24, 0.16, 'lowpass');
+                        this.tone(58, 2.2, 'sawtooth', 0.09, 34);
+                        break;
                     case 'cricket':
                         this.tone(3300 + r() * 700, 0.075, 'sine', 0.012, 3000);
                         setTimeout(() => this.tone(3400 + r() * 600, 0.065, 'sine', 0.01, 3100), 115);
@@ -1371,8 +1453,10 @@
                 this.signTags = new Map();
                 this.activeSignKey = null;
                 this.activeVillager = null;
-                this.chests = new Map(); this.arrows = []; this.fx = []; this.atkT = 0; this.eatT = 0; this.shootT = 0; this.fishing = null; this.chestKey = null; this.riding = null; this.petFor = null;
+                this.chests = new Map(); this.furnaces = new Map(); this.furnaceKey = null; this.durability = {};
+                this.arrows = []; this.fx = []; this.atkT = 0; this.eatT = 0; this.shootT = 0; this.fishing = null; this.chestKey = null; this.riding = null; this.petFor = null;
                 document.getElementById('close-chest').onclick = () => this.closeChest();
+                document.getElementById('close-furnace').onclick = () => this.closeFurnace();
                 document.getElementById('close-pet').onclick = () => this.closePet();
                 document.querySelectorAll('[data-cmd]').forEach(b => {
                     b.onclick = () => {
@@ -1719,7 +1803,10 @@
             damage(n, msg) {
                 const p = this.player;
                 if (n <= 0 || p.invuln > 0 || p.health <= 0) return;
-                p.health = Math.max(0, p.health - n);
+                const points = Object.values(p.worn).reduce((sum, id) => sum + ((ItemTypes[id] && ItemTypes[id].armor) || 0), 0);
+                const reduced = Math.max(1, Math.round(n * (1 - Math.min(0.8, points * 0.04))));
+                p.health = Math.max(0, p.health - reduced);
+                Object.values(p.worn).forEach(id => this.damageTool(id, 1, true));
                 this.audio.play('damage');
                 const f = document.getElementById('damage-flash');
                 f.style.transition = 'none'; f.style.opacity = '0.9';
@@ -1731,6 +1818,28 @@
             die(msg) {
                 this.toast((msg ? msg + '. ' : '') + 'You died');
                 this.respawn();
+            }
+
+            damageTool(id, amount, armorPiece) {
+                const item = ItemTypes[id];
+                if (!item || !item.durability) return;
+                const current = this.durability[id] === undefined ? item.durability : this.durability[id];
+                const next = current - amount;
+                if (next > 0) {
+                    this.durability[id] = next;
+                } else {
+                    delete this.durability[id];
+                    if (armorPiece) {
+                        const slot = item.slot;
+                        if (this.player.worn[slot] === id) delete this.player.worn[slot];
+                        this.toast(item.name + ' broke!');
+                    } else {
+                        this.spend(id, 1);
+                        this.toast(item.name + ' broke!');
+                    }
+                }
+                this.updateHotbarUI();
+                this.refreshInventory();
             }
 
             respawn() {
@@ -2165,6 +2274,11 @@
                     a.head.rotation.x = a.walking ? 0 : Math.max(0, Math.sin(performance.now() * 0.002 + i)) * 0.5;
                     a.group.position.set(a.x, a.y + (a.type === 'rabbit' ? Math.abs(Math.sin(a.phase * 0.7)) * 0.25 * a.gait : 0), a.z);
                     a.group.rotation.y = a.heading;
+                    if (a.tamedHeart) {
+                        const t = performance.now() * 0.001 + a.phase;
+                        a.tamedHeart.position.y = a.cy * 2 + 0.72 + Math.sin(t * 2) * 0.07;
+                        a.tamedHeart.rotation.z = t * 1.8;
+                    }
                     if (Math.hypot(a.x - pp.x, a.z - pp.z) < 12) {
                         a.voiceT = (a.voiceT || (2 + Math.random() * 7)) - dt;
                         if (a.voiceT <= 0) {
@@ -2221,7 +2335,7 @@
                     this.requestImmersiveMode();
                     return;
                 }
-                this.audio.stopTitleMusic();
+                this.audio.stopTitleMusic(this.touch ? 1200 : 0);
                 this.gameStarted = true;
                 document.body.classList.remove('title-screen');
                 const splash = document.getElementById('splash-screen');
@@ -3088,6 +3202,7 @@
                     if (above) this.setBlockAt(hit.x, hit.y + 1, hit.z, 0);
                     this.spawnParticles(hit.x, hit.y + 0.5, hit.z, 0x5b3a1e, 6, 1.5, 0.07);
                     this.audio.play('till');
+                    this.damageTool(id, 1, false);
                     return true;
                 }
                 if (id === 111 && hit.id === 48 && hit.ny > 0 && open) {
@@ -3744,6 +3859,27 @@
                     g.userData = { ox: Math.random() * 400, oz: Math.random() * 400 };
                     this.scene.add(g); this.clouds.push(g);
                 }
+                const makeWeatherPoints = (count, size, color, opacity) => {
+                    const positions = new Float32Array(count * 3);
+                    for (let i = 0; i < count; i++) {
+                        positions[i * 3] = (Math.random() - 0.5) * 38;
+                        positions[i * 3 + 1] = Math.random() * 28;
+                        positions[i * 3 + 2] = (Math.random() - 0.5) * 38;
+                    }
+                    const geometry = new THREE.BufferGeometry();
+                    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                    const points = new THREE.Points(geometry, new THREE.PointsMaterial({
+                        color, size, sizeAttenuation: true, transparent: true, opacity, depthWrite: false
+                    }));
+                    points.frustumCulled = false;
+                    this.scene.add(points);
+                    return { points, positions };
+                };
+                this.rainParticles = makeWeatherPoints(this.touch ? 220 : 600, 0.11, 0x9fc8ff, 0.52);
+                this.snowParticles = makeWeatherPoints(this.touch ? 130 : 360, 0.19, 0xffffff, 0.9);
+                this.rainParticles.points.visible = false;
+                this.snowParticles.points.visible = false;
+                this.weatherState = 'clear'; this.weatherTimer = 65; this.weatherThunderT = 18; this.weatherOutdoor = false;
                 this.tod = 0.12; this.cloudDrift = 0; this.isNight = false;
                 this._cDay = new THREE.Color(0x87ceeb); this._cNight = new THREE.Color(0x070b1e); this._cDusk = new THREE.Color(0xff9a5a); this._cWater = new THREE.Color(0x2a5d9f);
                 this.tLights = [];
@@ -3774,10 +3910,12 @@
                 col.multiplyScalar(1 - 0.92 * dark);
                 this.eyeWet = this.getBlock(Math.round(this.camera.position.x), Math.round(this.camera.position.y), Math.round(this.camera.position.z)) === 9;
                 if (this.eyeWet) col.copy(this._cWater).multiplyScalar(0.3 + 0.7 * k * (1 - dark));
+                if (this.weatherOutdoor && this.weatherState === 'rain') col.multiplyScalar(0.72);
+                if (this.weatherOutdoor && this.weatherState === 'snow') col.lerp(new THREE.Color(0xc9d8e0), 0.18);
                 this.scene.background.copy(col); this.scene.fog.color.copy(col);
-                this.scene.fog.density = this.eyeWet ? 0.12 : ((this.touch ? 0.03 : 0.02) + dark * 0.03);
-                this.ambientLight.intensity = (0.26 + 0.4 * k) * (1 - 0.72 * dark);
-                this.sunLight.intensity = (0.1 + 0.75 * k) * (1 - 0.85 * dark);
+                this.scene.fog.density = this.eyeWet ? 0.12 : ((this.touch ? 0.03 : 0.02) + dark * 0.03 + (this.weatherOutdoor && this.weatherState === 'rain' ? 0.012 : 0));
+                this.ambientLight.intensity = (0.26 + 0.4 * k) * (1 - 0.72 * dark) * (this.weatherOutdoor && this.weatherState === 'rain' ? 0.76 : 1);
+                this.sunLight.intensity = (0.1 + 0.75 * k) * (1 - 0.85 * dark) * (this.weatherOutdoor && this.weatherState === 'rain' ? 0.68 : 1);
                 this.sunLight.position.set(sd.x * 200, Math.max(sd.y, 0.2) * 200, sd.z * 200);
                 this.cloudDrift += dt * 1.8;
                 this.cloudMat.color.setScalar(0.3 + 0.7 * k);
@@ -3787,6 +3925,58 @@
                     g.position.set(cam.x + dx, 96, cam.z + dz);
                 });
                 this.isNight = elev < -0.08;
+            }
+
+            updateWeather(dt) {
+                if (!this.gameStarted) {
+                    this.rainParticles.points.visible = false;
+                    this.snowParticles.points.visible = false;
+                    return;
+                }
+                this.weatherTimer -= dt;
+                if (this.weatherTimer <= 0) {
+                    if (this.weatherState === 'clear') {
+                        const biome = this.terrain(Math.round(this.player.position.x), Math.round(this.player.position.z)).biome;
+                        if (biome === 'desert' || Math.random() < 0.28) {
+                            this.weatherState = 'clear';
+                            this.weatherTimer = 45 + Math.random() * 55;
+                        } else {
+                            this.weatherState = biome === 'snow' ? 'snow' : 'rain';
+                            this.weatherTimer = 30 + Math.random() * 45;
+                            this.weatherThunderT = 10 + Math.random() * 20;
+                        }
+                    } else {
+                        this.weatherState = 'clear';
+                        this.weatherTimer = 55 + Math.random() * 75;
+                    }
+                }
+                const biome = this.terrain(Math.round(this.player.position.x), Math.round(this.player.position.z)).biome;
+                if (this.weatherState !== 'clear') this.weatherState = biome === 'snow' ? 'snow' : 'rain';
+                this.weatherOutdoor = this.weatherState !== 'clear' && this.undergroundFactor() < 0.65;
+                this.rainParticles.points.visible = this.weatherOutdoor && this.weatherState === 'rain';
+                this.snowParticles.points.visible = this.weatherOutdoor && this.weatherState === 'snow';
+                if (this.weatherState === 'rain') {
+                    this.weatherThunderT -= dt;
+                    if (this.weatherThunderT <= 0) {
+                        if (Math.random() < 0.45) this.audio.play('thunder');
+                        this.weatherThunderT = 14 + Math.random() * 26;
+                    }
+                }
+                const active = this.weatherState === 'snow' ? this.snowParticles : this.rainParticles;
+                if (!this.weatherOutdoor) return;
+                const positions = active.positions, p = this.player.position, cam = this.camera.position;
+                for (let i = 0; i < positions.length; i += 3) {
+                    positions[i + 1] -= dt * (this.weatherState === 'snow' ? 2.4 : 20);
+                    if (this.weatherState === 'snow') positions[i] += Math.sin(this.tod * 24 + i) * dt * 0.35;
+                    if (positions[i + 1] < cam.y - 4) {
+                        positions[i] = p.x + (Math.random() - 0.5) * 38;
+                        positions[i + 1] = cam.y + 18 + Math.random() * 10;
+                        positions[i + 2] = p.z + (Math.random() - 0.5) * 38;
+                    } else {
+                        positions[i] += this.weatherState === 'rain' ? -0.8 * dt : 0;
+                    }
+                }
+                active.points.geometry.attributes.position.needsUpdate = true;
             }
 
             updateWater(dt) {
@@ -3809,7 +3999,9 @@
             }
 
             updateExtras(dt) {
+                this.updateWeather(dt);
                 this.updateSky(dt);
+                this.updateFurnaces(dt);
                 this.updateWater(dt);
                 this.updateParticles(dt);
                 this.updateTorchLights(dt);
@@ -4014,11 +4206,51 @@
 
             heartTex() {
                 if (this._heartTex) return this._heartTex;
-                const c = document.createElement('canvas'); c.width = c.height = 64;
-                const x = c.getContext('2d');
-                x.font = EMOJI_FONT; x.textAlign = 'center'; x.textBaseline = 'middle';
-                x.fillText('\u2764\uFE0F', 32, 36);
-                return (this._heartTex = new THREE.CanvasTexture(c));
+                const rows = [
+                    '....##....##....',
+                    '...####..####...',
+                    '..############..',
+                    '.##############.',
+                    '################',
+                    '################',
+                    '################',
+                    '.##############.',
+                    '..############..',
+                    '...##########...',
+                    '....########....',
+                    '.....######.....',
+                    '......####......',
+                    '.......##.......',
+                    '................',
+                    '................'
+                ];
+                const canvas = document.createElement('canvas');
+                canvas.width = canvas.height = 16;
+                const ctx = canvas.getContext('2d');
+                const filled = new Set();
+                rows.forEach((row, y) => {
+                    for (let x = 0; x < row.length; x++) if (row[x] === '#') filled.add(`${x},${y}`);
+                });
+                ctx.fillStyle = '#080808';
+                filled.forEach(key => {
+                    const [x, y] = key.split(',').map(Number);
+                    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+                        if (!filled.has(`${x + dx},${y + dy}`)) ctx.fillRect(x + dx, y + dy, 1, 1);
+                    }
+                });
+                filled.forEach(key => {
+                    const [x, y] = key.split(',').map(Number);
+                    ctx.fillStyle = y < 5 ? '#ff5267' : '#e51c37';
+                    ctx.fillRect(x, y, 1, 1);
+                });
+                ctx.fillStyle = '#ff9aaa';
+                ctx.fillRect(4, 3, 2, 1);
+                ctx.fillRect(3, 4, 1, 1);
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.magFilter = THREE.NearestFilter;
+                texture.minFilter = THREE.NearestFilter;
+                texture.generateMipmaps = false;
+                return (this._heartTex = texture);
             }
 
             heartPop(a) {
@@ -4040,10 +4272,13 @@
             }
 
             markTamed(a) {
-                const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.heartTex(), transparent: true }));
-                sp.scale.set(0.4, 0.4, 0.4);
-                sp.position.set(0, a.cy * 2 + 0.5, 0);
+                const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+                    map: this.heartTex(), transparent: true, alphaTest: 0.1, depthTest: false, depthWrite: false
+                }));
+                sp.scale.set(0.48, 0.48, 1);
+                sp.position.set(0, a.cy * 2 + 0.72, 0);
                 a.group.add(sp);
+                a.tamedHeart = sp;
                 a.tamed = true;
                 a.cmd = 'follow';
                 if (a.type === 'wolf') {
@@ -4127,6 +4362,7 @@
                 this.audio.play('bow');
                 this.shootT = now;
                 this.spend(106, 1);
+                this.damageTool(this.player.selectedBlockId, 1, false);
                 const d = new THREE.Vector3();
                 this.camera.getWorldDirection(d);
                 const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.6), new THREE.MeshLambertMaterial({ color: 0xc9a66b }));
@@ -4178,6 +4414,7 @@
                     p.worn[it.slot] = id;
                     this.spend(id, 1);
                     if (old) this.gain(old, 1);
+                    this.durability[id] = this.durability[id] === undefined ? it.durability : this.durability[id];
                     this.toast('Wearing ' + it.name);
                 }
             }
@@ -4185,6 +4422,7 @@
             breakBlock(hit) {
                 const key = `${hit.x},${hit.y},${hit.z}`;
                 const chest = hit.id === 30 ? this.chests.get(key) : null;
+                const furnace = hit.id === 54 ? this.furnaces.get(key) : null;
                 const hb = BlockTypes[hit.id];
                 this.audio.play('break', this.audioMaterial(hit.id));
                 this.spawnParticles(hit.x, hit.y, hit.z, this.blockColor(hit.id), 14, 2.4, 0.1);
@@ -4198,7 +4436,15 @@
                     Object.keys(chest).forEach(k => { if (chest[k] > 0) this.spawnDrop(hit.x, hit.y + 0.3, hit.z, parseInt(k, 10), chest[k]); });
                     this.chests.delete(key);
                 }
+                if (furnace) {
+                    [furnace.input, furnace.fuel, furnace.output].forEach(slot => {
+                        if (slot && slot.count > 0) this.spawnDrop(hit.x, hit.y + 0.3, hit.z, slot.id, slot.count);
+                    });
+                    this.furnaces.delete(key);
+                }
                 this.player.blocksMined++;
+                const held = this.player.selectedBlockId;
+                if (ItemTypes[held] && ItemTypes[held].durability) this.damageTool(held, 1, false);
                 document.getElementById('stats-mined').innerText = this.player.blocksMined;
                 if (hit.id === 9) this.toast('Water collected; this source refills in 30 seconds');
                 this.crack.visible = false; this.mine.key = null; this.mine.hits = 0;
@@ -4216,6 +4462,129 @@
             closeChest() {
                 document.getElementById('chest-modal').classList.add('hidden');
                 this.chestKey = null;
+            }
+
+            openFurnace(key) {
+                this.audio.play('chest');
+                this.furnaceKey = key;
+                if (!this.furnaces.has(key)) this.furnaces.set(key, { input: null, fuel: null, output: null, burn: 0, burnTotal: 0, progress: 0 });
+                if (document.pointerLockElement) document.exitPointerLock();
+                document.getElementById('furnace-modal').classList.remove('hidden');
+                this.refreshFurnace();
+            }
+
+            closeFurnace() {
+                document.getElementById('furnace-modal').classList.add('hidden');
+                this.furnaceKey = null;
+            }
+
+            smeltResult(id) {
+                if (id === 43) return 131;
+                if (id === 44) return 132;
+                if (id === 107) return 108;
+                if (id === 116) return 117;
+                if (id === 118) return 119;
+                if (id === 120) return 121;
+                if (id === 149) return 150;
+                if (id === 6) return 8;
+                return 0;
+            }
+
+            isFuel(id) {
+                return id === 130 || [4, 5, 12, 13, 17, 38].includes(id);
+            }
+
+            refreshFurnace() {
+                const furnace = this.furnaces.get(this.furnaceKey);
+                if (!furnace) return;
+                const drawSlot = (elementId, slot, allowTake) => {
+                    const el = document.getElementById(elementId);
+                    el.innerHTML = '';
+                    if (!slot) { el.innerHTML = '<span class="text-xs text-zinc-600">Empty</span>'; return; }
+                    const id = slot.id;
+                    const cell = document.createElement('button');
+                    cell.className = 'w-12 h-12 bg-zinc-800 border border-white/20 rounded-lg relative';
+                    cell.title = info(id).name;
+                    cell.innerHTML = `<img class="block-icon" style="width:36px;height:36px" src="${this.getIcon(id)}" alt=""><span class="absolute bottom-0 right-1 text-xs">${slot.count}</span>`;
+                    cell.onclick = () => {
+                        if (!allowTake) return;
+                        if (elementId === 'furnace-output') {
+                            if (slot.count > 0) this.gain(id, slot.count);
+                            furnace.output = null;
+                        } else {
+                            this.gain(id, slot.count);
+                            furnace[elementId === 'furnace-input' ? 'input' : 'fuel'] = null;
+                        }
+                        this.refreshFurnace();
+                    };
+                    el.appendChild(cell);
+                };
+                drawSlot('furnace-input', furnace.input, true);
+                drawSlot('furnace-fuel', furnace.fuel, true);
+                drawSlot('furnace-output', furnace.output, true);
+                document.getElementById('furnace-progress').style.width = `${Math.min(100, furnace.progress / 4 * 100)}%`;
+                const grid = document.getElementById('furnace-inv');
+                grid.innerHTML = '';
+                Object.keys(this.inv).filter(k => this.inv[k] > 0).forEach(k => {
+                    const id = parseInt(k, 10);
+                    const cell = document.createElement('button');
+                    cell.className = 'w-12 h-12 bg-zinc-800/80 border border-white/10 rounded-lg relative';
+                    cell.title = info(id).name;
+                    cell.innerHTML = `<img class="block-icon" style="width:36px;height:36px" src="${this.getIcon(id)}" alt=""><span class="absolute bottom-0 right-1 text-xs">${this.inv[id]}</span>`;
+                    cell.onclick = () => {
+                        if (this.smeltResult(id)) {
+                            if (furnace.input && furnace.input.id !== id) return;
+                            furnace.input = furnace.input || { id, count: 0 };
+                            furnace.input.count++;
+                            this.spend(id, 1);
+                        } else if (this.isFuel(id)) {
+                            if (furnace.fuel && furnace.fuel.id !== id) return;
+                            furnace.fuel = furnace.fuel || { id, count: 0 };
+                            furnace.fuel.count++;
+                            this.spend(id, 1);
+                        } else return;
+                        this.refreshFurnace();
+                    };
+                    grid.appendChild(cell);
+                });
+            }
+
+            updateFurnaces(dt) {
+                let refresh = false;
+                for (const furnace of this.furnaces.values()) {
+                    const result = furnace.input && this.smeltResult(furnace.input.id);
+                    const canOutput = result && (!furnace.output || furnace.output.id === result);
+                    if (!canOutput) {
+                        if (furnace.progress !== 0) refresh = true;
+                        furnace.progress = 0;
+                        continue;
+                    }
+                    if (furnace.burn <= 0 && furnace.fuel && furnace.fuel.count > 0) {
+                        furnace.burnTotal = furnace.fuel.id === 130 ? 8 : 4;
+                        furnace.burn = furnace.burnTotal;
+                        furnace.fuel.count--;
+                        if (furnace.fuel.count <= 0) furnace.fuel = null;
+                        refresh = true;
+                    }
+                    if (furnace.burn <= 0) continue;
+                    furnace.burn = Math.max(0, furnace.burn - dt);
+                    furnace.progress += dt;
+                    if (furnace.progress >= 4) {
+                        furnace.progress -= 4;
+                        furnace.input.count--;
+                        if (furnace.input.count <= 0) furnace.input = null;
+                        furnace.output = furnace.output || { id: result, count: 0 };
+                        furnace.output.count++;
+                        refresh = true;
+                    }
+                }
+                if (this.furnaceKey) {
+                    if (refresh) this.refreshFurnace();
+                    else {
+                        const furnace = this.furnaces.get(this.furnaceKey);
+                        if (furnace) document.getElementById('furnace-progress').style.width = `${Math.min(100, furnace.progress / 4 * 100)}%`;
+                    }
+                }
             }
 
             refreshChest() {
@@ -4283,7 +4652,7 @@
 
             handleRaycastAction(action) {
                 const p = this.player, now = performance.now();
-                if (this.petFor || this.chestKey) return;
+                if (this.petFor || this.chestKey || this.furnaceKey) return;
                 this.swing = 1;
                 const held = (p.selectedBlockId && this.inv[p.selectedBlockId] > 0) ? p.selectedBlockId : 0;
                 const it = isItem(held) ? ItemTypes[held] : null;
@@ -4293,7 +4662,10 @@
                     if (it && it.kind === 'rod') { this.useRod(); return; }
                     const a = this.animalAt(it && it.kind === 'spear' ? 4.6 : 3.4);
                     if (a) {
-                        if (now - this.atkT > 380) { this.atkT = now; this.attackAnimal(a, it && it.dmg ? it.dmg : 1); }
+                        if (now - this.atkT > 380) {
+                            this.atkT = now; this.attackAnimal(a, it && it.dmg ? it.dmg : 1);
+                            if (!a.vehicle && !a.tamed && it && it.durability) this.damageTool(held, 1, false);
+                        }
                         return;
                     }
                 } else {
@@ -4319,6 +4691,7 @@
                 }
                 if (action === 'place' && hit && BlockTypes[hit.id].shape === 'door') { this.toggleDoor(hit); return; }
                 if (action === 'place' && hit && hit.id === 30) { this.openChest(`${hit.x},${hit.y},${hit.z}`); return; }
+                if (action === 'place' && hit && hit.id === 54) { this.openFurnace(`${hit.x},${hit.y},${hit.z}`); return; }
                 if (action === 'place' && hit && hit.id === 33) { this.sleep(hit); return; }
                 if (action === 'place' && this.useOnBlock(held, it, hit, now)) return;
                 if (action === 'place' && it) { this.useItem(held, now); return; }
@@ -4439,7 +4812,9 @@
                     const save = JSON.stringify({
                         edits: Array.from(this.edits), inv: this.inv, hotbar: HotbarItems,
                         pos: [p.x, p.y, p.z], yaw: this.yaw, pitch: this.pitch, health: this.player.health, hunger: this.player.hunger,
-                        tod: this.tod, spawn: this.spawnPos ? [this.spawnPos.x, this.spawnPos.y, this.spawnPos.z] : null, chests: Array.from(this.chests), signs: this.signs, worn: this.player.worn, tamed: this.animals.filter(q => q.tamed).map(q => [q.type, q.x, q.y, q.z, q.name || '', q.cmd || 'follow']),
+                        tod: this.tod, spawn: this.spawnPos ? [this.spawnPos.x, this.spawnPos.y, this.spawnPos.z] : null, chests: Array.from(this.chests), furnaces: Array.from(this.furnaces),
+                        signs: this.signs, worn: this.player.worn, durability: this.durability,
+                        tamed: this.animals.filter(q => q.tamed).map(q => [q.type, q.x, q.y, q.z, q.name || '', q.cmd || 'follow']),
                         waterRegrowth: Array.from(this.waterRegrowth)
                     });
                     try {
@@ -4487,7 +4862,8 @@
                     for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) this.genChunk(cx + dx, cz + dz);
                     if (s.tod !== undefined) this.tod = s.tod;
                     if (s.spawn) this.spawnPos = new THREE.Vector3(s.spawn[0], s.spawn[1], s.spawn[2]);
-                    this.chests = new Map(s.chests || []); this.player.worn = s.worn || {};
+                    this.chests = new Map(s.chests || []); this.furnaces = new Map(s.furnaces || []);
+                    this.player.worn = s.worn || {}; this.durability = s.durability || {};
                     this.animals.forEach(q => this.scene.remove(q.group)); this.animals = [];
                     (s.tamed || []).forEach(t => { const a = this.addAnimal(t[0], t[1], t[2], t[3], true); a.name = t[4] || ''; a.cmd = t[5] || 'follow'; if (a.name) this.nameTag(a); });
                     this.player.health = s.health ?? 20; this.player.hunger = s.hunger ?? 20; this.player.air = 10; this.player.invuln = 2;
