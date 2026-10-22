@@ -2273,7 +2273,7 @@
                     if (this.gameStarted) return;
                     this.audio.unlock();
                     this.audio.startTitleMusic();
-                }, { once: true });
+                });
                 document.addEventListener('pointerlockchange', () => {
                     this.controls.isLocked = document.pointerLockElement === canvas;
                     this.fallbackLookX = null;
@@ -4716,6 +4716,8 @@
 
         window.onload = () => {
             window.gameInstance = new Game();
+            window.gameInstance.audio.unlock();
+            window.gameInstance.audio.startTitleMusic();
         };
     </script>
 </body>
