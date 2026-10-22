@@ -864,6 +864,16 @@
         addBlock(50, 'Red Flower', flowerTx('#d62828', '#ffe066'), crossOpt({ flower: true }));
         addBlock(51, 'Yellow Flower', flowerTx('#f2c230', '#8a5a20'), crossOpt({ flower: true }));
         addBlock(52, 'Mushroom', crossTx(c => { c.fillStyle = '#e8dcc0'; c.fillRect(7, 10, 2, 5); c.fillStyle = '#c0392b'; c.fillRect(4, 7, 8, 3); c.fillRect(5, 6, 6, 1); c.fillStyle = '#ffffff'; c.fillRect(5, 8, 1, 1); c.fillRect(8, 7, 1, 1); c.fillRect(10, 8, 1, 1); }), crossOpt());
+        PixelSprites[52] = {
+            grid: [
+                '................', '................', '................', '......oooo......',
+                '....orrrrrro....', '..orrrrrrrrrro..', '.orrrrrrrrrrrro.',
+                '..orrrhhhhrrro..', '....orrrrrro....', '......osso......',
+                '......osso......', '......osso......', '......osso......',
+                '......osso......', '.....osssso.....', '................'
+            ],
+            pal: { o: '#3b2410', r: '#c0392b', h: '#f08a75', s: '#e8dcc0' }
+        };
         for (let st = 0; st < 4; st++) {
             addBlock(53 + st, 'Wheat Crop', crossTx(c => {
                 const col = ['#6dbb3a', '#7ec441', '#b8c04a', '#e3c15a'][st], h = [4, 8, 12, 14][st];
