@@ -985,8 +985,273 @@
         /*************************************************************
          * GAME ENGINE & WORLD
          ********************************-----------------------------*/
+        class GameAudio {
+            constructor() {
+                this.ctx = null;
+                this.master = null;
+                this.noiseBuffer = null;
+                this.ambienceTimer = 0;
+                this.nextDrip = 4;
+                this.titleMusicTimer = null;
+                this.titleMusicStep = 0;
+                this.titleMusicGain = null;
+            }
+
+            unlock() {
+                if (!this.ctx) {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioContextClass) return;
+                    this.ctx = new AudioContextClass();
+                    this.master = this.ctx.createGain();
+                    this.master.gain.value = 0.28;
+                    this.master.connect(this.ctx.destination);
+                    const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 2, this.ctx.sampleRate);
+                    const samples = buffer.getChannelData(0);
+                    for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
+                    this.noiseBuffer = buffer;
+
+                    const source = this.ctx.createBufferSource();
+                    const filter = this.ctx.createBiquadFilter();
+                    this.windGain = this.ctx.createGain();
+                    source.buffer = buffer;
+                    source.loop = true;
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 420;
+                    this.windGain.gain.value = 0;
+                    source.connect(filter);
+                    filter.connect(this.windGain);
+                    this.windGain.connect(this.master);
+                    source.start();
+
+                    const underwaterFilter = this.ctx.createBiquadFilter();
+                    this.waterGain = this.ctx.createGain();
+                    underwaterFilter.type = 'lowpass';
+                    underwaterFilter.frequency.value = 260;
+                    this.waterGain.gain.value = 0;
+                    source.connect(underwaterFilter);
+                    underwaterFilter.connect(this.waterGain);
+                    this.waterGain.connect(this.master);
+                    this.ambienceSource = source;
+                }
+                const resume = this.ctx.resume();
+                if (resume && resume.then) {
+                    resume.then(() => {
+                        if (this.titleMusicWanted) this.startTitleMusic();
+                    }).catch(error => console.warn('CraftJS audio could not start:', error));
+                }
+            }
+
+            tone(frequency, duration, wave, volume, endFrequency) {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const oscillator = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                oscillator.type = wave || 'sine';
+                oscillator.frequency.setValueAtTime(Math.max(25, frequency), now);
+                if (endFrequency) oscillator.frequency.exponentialRampToValueAtTime(Math.max(25, endFrequency), now + duration);
+                gain.gain.setValueAtTime(0.0001, now);
+                gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume || 0.04), now + 0.008);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+                oscillator.connect(gain);
+                gain.connect(this.master);
+                oscillator.start(now);
+                oscillator.stop(now + duration + 0.02);
+            }
+
+            noise(duration, low, high, volume, wave) {
+                if (!this.ctx || !this.noiseBuffer) return;
+                const now = this.ctx.currentTime;
+                const source = this.ctx.createBufferSource();
+                const filter = this.ctx.createBiquadFilter();
+                const gain = this.ctx.createGain();
+                source.buffer = this.noiseBuffer;
+                filter.type = wave || 'bandpass';
+                filter.frequency.setValueAtTime(Math.max(40, low), now);
+                filter.Q.value = 0.7;
+                if (high && high !== low) filter.frequency.exponentialRampToValueAtTime(Math.max(40, high), now + duration);
+                gain.gain.setValueAtTime(0.0001, now);
+                gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume || 0.03), now + 0.008);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+                source.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.master);
+                source.start(now);
+                source.stop(now + duration + 0.02);
+            }
+
+            startTitleMusic() {
+                this.titleMusicWanted = true;
+                if (!this.ctx || this.ctx.state !== 'running' || this.titleMusicTimer !== null) return;
+                if (!this.titleMusicGain) {
+                    this.titleMusicGain = this.ctx.createGain();
+                    this.titleMusicGain.gain.value = 0;
+                    this.titleMusicGain.connect(this.master);
+                }
+                const now = this.ctx.currentTime;
+                this.titleMusicGain.gain.cancelScheduledValues(now);
+                this.titleMusicGain.gain.setTargetAtTime(0.72, now, 0.8);
+                const melody = [0, 4, 2, 6, 4, 1, 6, 4, 2, 6, 4, 1, 6, 4, 2, 0];
+                const notes = [440, 523.25, 587.33, 659.25, 783.99, 880, 1046.5];
+                const bass = [110, 98, 87.31, 82.41];
+                const playNote = (frequency, duration, volume) => {
+                    const start = this.ctx.currentTime + 0.015;
+                    const oscillator = this.ctx.createOscillator();
+                    const envelope = this.ctx.createGain();
+                    oscillator.type = 'triangle';
+                    oscillator.frequency.value = frequency;
+                    envelope.gain.setValueAtTime(0.0001, start);
+                    envelope.gain.exponentialRampToValueAtTime(volume, start + 0.035);
+                    envelope.gain.setValueAtTime(volume, start + duration * 0.55);
+                    envelope.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+                    oscillator.connect(envelope);
+                    envelope.connect(this.titleMusicGain);
+                    oscillator.start(start);
+                    oscillator.stop(start + duration + 0.03);
+                };
+                const tick = () => {
+                    if (this.titleMusicTimer === null || !this.titleMusicWanted || !this.ctx) return;
+                    if (this.ctx.state !== 'running') {
+                        this.titleMusicTimer = setTimeout(tick, 500);
+                        return;
+                    }
+                    const step = this.titleMusicStep % 64;
+                    const bar = Math.floor(step / 16);
+                    const beat = step % 16;
+                    if (beat % 2 === 0) {
+                        const phrase = Math.floor(beat / 4);
+                        const variation = (this.titleMusicStep >> 6) % 3;
+                        const note = melody[(phrase * 4 + variation * 3) % melody.length];
+                        playNote(notes[note], 0.34, 0.065);
+                        if (beat === 0) {
+                            playNote(bass[bar] * 2, 1.2, 0.018);
+                            playNote(bass[bar] * 3, 1.2, 0.012);
+                        }
+                    }
+                    this.titleMusicStep++;
+                    this.titleMusicTimer = setTimeout(tick, 160);
+                };
+                this.titleMusicTimer = 0;
+                tick();
+            }
+
+            stopTitleMusic() {
+                this.titleMusicWanted = false;
+                if (this.titleMusicTimer !== null) {
+                    clearTimeout(this.titleMusicTimer);
+                    this.titleMusicTimer = null;
+                }
+                if (this.ctx && this.titleMusicGain) {
+                    const now = this.ctx.currentTime;
+                    this.titleMusicGain.gain.cancelScheduledValues(now);
+                    this.titleMusicGain.gain.setTargetAtTime(0, now, 0.35);
+                }
+            }
+
+            play(name, material) {
+                const r = Math.random, m = material || 'soft';
+                switch (name) {
+                    case 'step':
+                        if (m === 'water') { this.noise(0.2, 450, 170, 0.07); this.tone(130, 0.12, 'sine', 0.04, 75); }
+                        else if (m === 'sand' || m === 'snow' || m === 'leaves' || m === 'soft') this.noise(0.12, m === 'snow' ? 650 : 900, 250, 0.045, 'lowpass');
+                        else { this.tone(m === 'stone' ? 105 : 145, 0.11, 'triangle', 0.06, 55); this.noise(0.07, 180, 100, 0.025, 'lowpass'); }
+                        break;
+                    case 'break':
+                    case 'place':
+                        if (m === 'glass') { this.tone(name === 'break' ? 1180 : 820, 0.22, 'sine', 0.055, name === 'break' ? 420 : 1250); this.noise(0.13, 2500, 1200, 0.035); }
+                        else if (m === 'stone') { this.tone(name === 'break' ? 175 : 230, 0.18, 'triangle', 0.07, 65); this.noise(0.15, 680, 130, 0.055, 'lowpass'); }
+                        else if (m === 'wood') { this.tone(name === 'break' ? 230 : 310, 0.17, 'triangle', 0.065, 90); this.noise(0.12, 720, 210, 0.05, 'lowpass'); }
+                        else if (m === 'water') { this.noise(0.3, 700, 260, 0.075); this.tone(260, 0.18, 'sine', 0.035, 100); }
+                        else if (m === 'metal') { this.tone(name === 'break' ? 670 : 920, 0.25, 'sine', 0.045, 240); }
+                        else { this.noise(0.18, 1100, 220, 0.06, 'lowpass'); this.tone(name === 'break' ? 150 : 205, 0.14, 'sine', 0.04, 70); }
+                        break;
+                    case 'mine':
+                        if (m === 'stone') this.tone(270 + r() * 80, 0.045, 'triangle', 0.022, 135);
+                        else if (m === 'wood') this.tone(210 + r() * 45, 0.055, 'triangle', 0.024, 100);
+                        else this.noise(0.045, 950, 360, 0.022, 'lowpass');
+                        break;
+                    case 'bow':
+                        this.noise(0.12, 1800, 650, 0.055);
+                        this.tone(420, 0.16, 'triangle', 0.045, 185);
+                        break;
+                    case 'damage':
+                        this.noise(0.22, 420, 120, 0.09, 'lowpass');
+                        this.tone(125, 0.28, 'sawtooth', 0.07, 48);
+                        break;
+                    case 'hit':
+                        this.noise(0.15, 1200, 300, 0.07, 'lowpass');
+                        this.tone(190, 0.16, 'triangle', 0.055, 75);
+                        break;
+                    case 'jump': this.tone(220, 0.16, 'sine', 0.035, 480); break;
+                    case 'land': this.tone(95, 0.14, 'triangle', 0.055, 52); this.noise(0.1, 300, 100, 0.035, 'lowpass'); break;
+                    case 'splash': this.noise(0.42, 1500, 300, 0.095); this.tone(260, 0.35, 'sine', 0.055, 90); break;
+                    case 'swim': this.noise(0.24, 850, 260, 0.035); break;
+                    case 'drip': this.tone(920 + r() * 650, 0.42, 'sine', 0.035, 360); break;
+                    case 'cricket':
+                        this.tone(3300 + r() * 700, 0.075, 'sine', 0.012, 3000);
+                        setTimeout(() => this.tone(3400 + r() * 600, 0.065, 'sine', 0.01, 3100), 115);
+                        break;
+                    case 'bird':
+                        this.tone(1550 + r() * 650, 0.16, 'sine', 0.018, 2200);
+                        setTimeout(() => this.tone(1900 + r() * 500, 0.12, 'sine', 0.014, 1400), 170);
+                        break;
+                    case 'animal':
+                        if (m === 'pig') { this.tone(390, 0.22, 'sawtooth', 0.025, 250); this.tone(620, 0.12, 'sine', 0.012, 470); }
+                        else if (m === 'cow') { this.tone(115, 0.6, 'sawtooth', 0.035, 72); this.tone(230, 0.45, 'triangle', 0.018, 155); }
+                        else if (m === 'sheep') { this.tone(470, 0.32, 'sawtooth', 0.022, 320); }
+                        else if (m === 'chicken') { this.tone(820, 0.12, 'triangle', 0.018, 520); this.tone(620, 0.12, 'triangle', 0.014, 760); }
+                        else if (m === 'zombie') { this.noise(0.55, 500, 180, 0.045, 'lowpass'); this.tone(105, 0.6, 'sawtooth', 0.035, 65); }
+                        else if (m === 'skeleton') { this.noise(0.26, 1700, 620, 0.035); this.tone(370, 0.2, 'triangle', 0.02, 220); }
+                        else if (m === 'wolf') { this.tone(170, 0.35, 'sawtooth', 0.03, 85); }
+                        else if (m === 'horse') { this.noise(0.18, 900, 320, 0.025); this.tone(220, 0.2, 'sine', 0.018, 130); }
+                        else if (m === 'bee') { this.tone(250, 0.22, 'sawtooth', 0.012, 310); }
+                        else if (m === 'bird') this.play('bird');
+                        else if (m === 'fish') { this.noise(0.14, 480, 180, 0.016, 'lowpass'); }
+                        else { this.tone(650, 0.12, 'sine', 0.014, 410); }
+                        break;
+                    case 'door': this.tone(220, 0.22, 'triangle', 0.05, 110); this.noise(0.13, 420, 150, 0.04, 'lowpass'); break;
+                    case 'cast': this.noise(0.16, 1500, 520, 0.035); this.tone(340, 0.15, 'sine', 0.025, 220); break;
+                    case 'till': this.noise(0.17, 800, 230, 0.045, 'lowpass'); this.tone(145, 0.13, 'triangle', 0.025, 70); break;
+                    case 'plant': this.noise(0.1, 1700, 600, 0.025); this.tone(540, 0.12, 'sine', 0.018, 720); break;
+                    case 'pickup': this.tone(660, 0.1, 'sine', 0.035, 990); this.tone(990, 0.16, 'sine', 0.025, 1320); break;
+                    case 'eat': this.noise(0.12, 650, 250, 0.025, 'lowpass'); this.tone(340, 0.14, 'sine', 0.025, 210); break;
+                    case 'craft': this.tone(440, 0.1, 'sine', 0.035); this.tone(660, 0.14, 'sine', 0.03); this.tone(880, 0.2, 'sine', 0.025); break;
+                    case 'tame': this.tone(520, 0.14, 'sine', 0.035); this.tone(780, 0.22, 'sine', 0.03); break;
+                    case 'fish': this.tone(740, 0.12, 'sine', 0.03, 1120); this.noise(0.22, 1100, 300, 0.05); break;
+                    case 'chest': this.noise(0.18, 320, 100, 0.045, 'lowpass'); this.tone(175, 0.2, 'triangle', 0.04, 105); break;
+                    case 'ui': this.tone(520, 0.07, 'sine', 0.018, 680); break;
+                    case 'heal': this.tone(440, 0.16, 'sine', 0.025, 660); break;
+                    case 'mobshot': this.noise(0.18, 1300, 380, 0.04); this.tone(280, 0.18, 'triangle', 0.025, 140); break;
+                    case 'sizzle': this.noise(0.32, 1500, 360, 0.028); break;
+                    case 'start': this.tone(392, 0.18, 'sine', 0.025); this.tone(587, 0.24, 'sine', 0.02); break;
+                }
+            }
+
+            updateAmbience(dt, state) {
+                if (!this.ctx || this.ctx.state !== 'running') return;
+                const now = this.ctx.currentTime;
+                const wind = state.started && !state.underwater ? (state.night ? 0.008 : 0.004) + state.cave * 0.012 : 0;
+                const water = state.started && state.underwater ? 0.025 : 0;
+                if (this.windLevel === undefined || Math.abs(this.windLevel - wind) > 0.001) {
+                    this.windLevel = wind;
+                    this.windGain.gain.setTargetAtTime(wind, now, 1.2);
+                }
+                if (this.waterLevel === undefined || Math.abs(this.waterLevel - water) > 0.001) {
+                    this.waterLevel = water;
+                    this.waterGain.gain.setTargetAtTime(water, now, 1.2);
+                }
+                if (!state.started) return;
+                this.ambienceTimer -= dt;
+                if (this.ambienceTimer > 0) return;
+                this.ambienceTimer = 2.2 + Math.random() * 3.8;
+                if (state.night && Math.random() < 0.75) this.play('cricket');
+                else if (state.cave > 0.65 && Math.random() < 0.7) this.play('drip');
+                else if (!state.night && !state.cave && !state.underwater && Math.random() < 0.3) this.play('bird');
+            }
+        }
+
         class Game {
             constructor() {
+                this.audio = new GameAudio();
                 this.gameStarted = false;
                 this.nightMobsEnabled = localStorage.getItem('craftjs_night_mobs_enabled') !== 'false';
                 this.container = document.getElementById('canvas-container');
@@ -1455,6 +1720,7 @@
                 const p = this.player;
                 if (n <= 0 || p.invuln > 0 || p.health <= 0) return;
                 p.health = Math.max(0, p.health - n);
+                this.audio.play('damage');
                 const f = document.getElementById('damage-flash');
                 f.style.transition = 'none'; f.style.opacity = '0.9';
                 requestAnimationFrame(() => requestAnimationFrame(() => { f.style.transition = 'opacity 0.6s'; f.style.opacity = '0'; }));
@@ -1500,7 +1766,7 @@
                 }
                 if (p.hunger >= 18 && p.health < 20) {
                     p.regenT += dt;
-                    if (p.regenT >= (p.worn.head ? 3 : 4)) { p.regenT = 0; p.health = Math.min(20, p.health + 1); }
+                    if (p.regenT >= (p.worn.head ? 3 : 4)) { p.regenT = 0; p.health = Math.min(20, p.health + 1); this.audio.play('heal'); }
                 } else p.regenT = 0;
                 if (p.hunger <= 0 && p.health > 2) {
                     p.starveT += dt;
@@ -1573,7 +1839,7 @@
                     if (d.magnet || (d.age > 0.6 && dist < 1.6)) {
                         const s = Math.min(1, dt * (d.magnet ? 16 : 9));
                         m.position.x += dx * s; m.position.y += dy * s; m.position.z += dz * s;
-                        if (dist < 0.6) { this.gain(d.id, d.n || 1); this.scene.remove(m); this.drops.splice(i, 1); }
+                        if (dist < 0.6) { this.gain(d.id, d.n || 1); this.audio.play('pickup'); this.scene.remove(m); this.drops.splice(i, 1); }
                         continue;
                     }
                     let gy = null;
@@ -1899,6 +2165,13 @@
                     a.head.rotation.x = a.walking ? 0 : Math.max(0, Math.sin(performance.now() * 0.002 + i)) * 0.5;
                     a.group.position.set(a.x, a.y + (a.type === 'rabbit' ? Math.abs(Math.sin(a.phase * 0.7)) * 0.25 * a.gait : 0), a.z);
                     a.group.rotation.y = a.heading;
+                    if (Math.hypot(a.x - pp.x, a.z - pp.z) < 12) {
+                        a.voiceT = (a.voiceT || (2 + Math.random() * 7)) - dt;
+                        if (a.voiceT <= 0) {
+                            this.audio.play('animal', a.type);
+                            a.voiceT = 9 + Math.random() * 20;
+                        }
+                    }
                 }
             }
 
@@ -1948,6 +2221,7 @@
                     this.requestImmersiveMode();
                     return;
                 }
+                this.audio.stopTitleMusic();
                 this.gameStarted = true;
                 document.body.classList.remove('title-screen');
                 const splash = document.getElementById('splash-screen');
@@ -1957,6 +2231,8 @@
                 this.yaw = 0;
                 this.pitch = 0;
                 this.camera.rotation.set(this.pitch, this.yaw, 0, 'YXZ');
+                this.audio.unlock();
+                this.audio.play('start');
                 this.requestImmersiveMode(false);
             }
 
@@ -1993,6 +2269,11 @@
                 const canvas = this.renderer.domElement;
                 this.fallbackLookX = null;
                 this.fallbackLookY = null;
+                document.addEventListener('pointerdown', () => {
+                    if (this.gameStarted) return;
+                    this.audio.unlock();
+                    this.audio.startTitleMusic();
+                }, { once: true });
                 document.addEventListener('pointerlockchange', () => {
                     this.controls.isLocked = document.pointerLockElement === canvas;
                     this.fallbackLookX = null;
@@ -2433,6 +2714,7 @@
                 if (b.shape === 'slab' && hb && hb.shape === 'slab' && hb.mi === b.mi && ((hit.ny > 0 && hb.v === 0) || (hit.ny < 0 && hb.v === 1))) {
                     this.setBlockAt(hit.x, hit.y, hit.z, SHAPE_MATS[b.mi]);
                     this.spend(id, 1);
+                    this.audio.play('place', this.audioMaterial(id));
                     return;
                 }
                 const tx = hit.x + hit.nx, ty = hit.y + hit.ny, tz = hit.z + hit.nz;
@@ -2467,6 +2749,7 @@
                 p.blocksPlaced++;
                 document.getElementById('stats-placed').innerText = p.blocksPlaced;
                 this.spend(id, 1);
+                this.audio.play('place', this.audioMaterial(id));
             }
 
             toggleDoor(hit) {
@@ -2476,6 +2759,7 @@
                 const other = this.getBlock(hit.x, py, hit.z);
                 this.setBlockAt(hit.x, hit.y, hit.z, flip(hit.id));
                 if (other && BlockTypes[other] && BlockTypes[other].shape === 'door') this.setBlockAt(hit.x, py, hit.z, flip(other));
+                this.audio.play('door');
             }
 
             nameTag(a) {
@@ -2623,6 +2907,7 @@
             }
 
             mobShoot(a) {
+                this.audio.play('mobshot');
                 const pp = this.player.position;
                 const o = new THREE.Vector3(a.x, a.y + 1.4, a.z);
                 const d = new THREE.Vector3(pp.x - o.x, (pp.y - 0.3) - o.y, pp.z - o.z).normalize();
@@ -2802,11 +3087,13 @@
                     this.setBlockAt(hit.x, hit.y, hit.z, 48);
                     if (above) this.setBlockAt(hit.x, hit.y + 1, hit.z, 0);
                     this.spawnParticles(hit.x, hit.y + 0.5, hit.z, 0x5b3a1e, 6, 1.5, 0.07);
+                    this.audio.play('till');
                     return true;
                 }
                 if (id === 111 && hit.id === 48 && hit.ny > 0 && open) {
                     this.setBlockAt(hit.x, hit.y + 1, hit.z, 53);
                     this.spend(111, 1);
+                    this.audio.play('plant');
                     return true;
                 }
                 if (hit.id === 283 && it && COOKABLE[id]) {
@@ -2814,6 +3101,7 @@
                     this.gain(COOKABLE[id], 1);
                     this.toast('Cooked');
                     this.spawnParticles(hit.x, hit.y + 0.6, hit.z, 0xffb030, 8, 1.2, 0.06);
+                    this.audio.play('sizzle');
                     return true;
                 }
                 return false;
@@ -2862,6 +3150,7 @@
                 const f = this.fishing;
                 if (f) {
                     if (f.bite) {
+                        this.audio.play('fish');
                         const r = Math.random();
                         const id = r < 0.82 ? 149 : (r < 0.9 ? 109 : (r < 0.97 ? 111 : 131));
                         this.gain(id, 1);
@@ -2873,6 +3162,7 @@
                 }
                 const w = this.waterRay(9);
                 if (!w) { this.toast('Aim at water to cast'); return; }
+                this.audio.play('cast');
                 const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.16), new THREE.MeshLambertMaterial({ color: 0xd63a32 }));
                 mesh.position.set(w.x, SEA + 0.5, w.z);
                 this.scene.add(mesh);
@@ -2891,6 +3181,7 @@
                 if (Math.hypot(pp.x - f.x, pp.z - f.z) > 16) { this.toast('Line snapped'); this.endFishing(); return; }
                 if (!f.bite && f.t >= f.biteAt) {
                     f.bite = true; f.window = 1.8;
+                    this.audio.play('fish');
                     this.toast('Something bit! Reel in!');
                     this.spawnParticles(f.x, SEA + 0.6, f.z, 0x4a90e2, 8, 1.8, 0.06);
                 } else if (f.bite) {
@@ -3531,11 +3822,27 @@
                     this.stepT = 0.32;
                     const feet = p.position.y - 1.6;
                     const id = this.getBlock(Math.round(p.position.x), Math.round(feet - 0.5), Math.round(p.position.z));
-                    if (id) this.spawnParticles(p.position.x, feet + 0.05, p.position.z, this.blockColor(id), 2, 0.6, 0.06);
+                    if (id) {
+                        this.spawnParticles(p.position.x, feet + 0.05, p.position.z, this.blockColor(id), 2, 0.6, 0.06);
+                        this.audio.play('step', this.audioMaterial(id));
+                    }
                 }
                 const wet = this.inWater();
-                if (wet && !this.wasWet) this.spawnParticles(p.position.x, p.position.y - 0.8, p.position.z, 0x4a90e2, 10, 2, 0.07);
+                if (wet && !this.wasWet) {
+                    this.spawnParticles(p.position.x, p.position.y - 0.8, p.position.z, 0x4a90e2, 10, 2, 0.07);
+                    this.audio.play('splash');
+                }
+                if (wet && hv > 0.6) {
+                    this.swimT = (this.swimT || 0) - dt;
+                    if (this.swimT <= 0) { this.swimT = 0.75; this.audio.play('swim'); }
+                } else this.swimT = 0;
                 this.wasWet = wet;
+                this.audio.updateAmbience(dt, {
+                    started: this.gameStarted,
+                    night: this.isNight,
+                    cave: this.undergroundFactor(),
+                    underwater: this.eyeWet
+                });
             }
 
             // Minecraft style item: the flat 16 by 16 sprite extruded one pixel thick, with side faces on every edge
@@ -3667,6 +3974,18 @@
 
             kindOf(id) { const b = (BlockTypes[id] && BlockTypes[id].base) || id; return WOOD_SET.has(b) ? 'wood' : (STONE_SET.has(b) ? 'stone' : 'soft'); }
 
+            audioMaterial(id) {
+                const b = BlockTypes[id];
+                const base = (b && b.base) || id;
+                if (base === 9) return 'water';
+                if (base === 8 || base === 39) return 'glass';
+                if (base === 6 || base === 17 || base === 41) return 'sand';
+                if (base === 10) return 'snow';
+                if (base === 5 || base === 12) return 'leaves';
+                if (base === 31 || base === 34) return 'metal';
+                return this.kindOf(id);
+            }
+
             heldItem() {
                 const id = this.player.selectedBlockId;
                 return (isItem(id) && this.inv[id] > 0) ? ItemTypes[id] : null;
@@ -3771,6 +4090,7 @@
             attackAnimal(a, dmg) {
                 if (a.vehicle) { this.gain(151, 1); this.removeAnimal(a); return; }
                 if (a.tamed) { this.toast('They trust you too much to hurt them'); return; }
+                this.audio.play('hit');
                 a.hp -= dmg;
                 if (a.type === 'wolf') a.aggroT = 12; else if (!a.hostile && !a.critter) a.fleeT = 5;
                 this.flashAnimal(a);
@@ -3797,13 +4117,14 @@
                 a.tame++;
                 a.fleeT = 0;
                 this.heartPop(a);
-                if (a.tame >= 3) { this.markTamed(a); this.toast('You tamed the ' + a.type + '!'); }
+                if (a.tame >= 3) { this.markTamed(a); this.audio.play('tame'); this.toast('You tamed the ' + a.type + '!'); }
             }
 
             shoot() {
                 const now = performance.now();
                 if (now - this.shootT < 450) return;
                 if (!(this.inv[106] > 0)) { this.toast('No arrows'); return; }
+                this.audio.play('bow');
                 this.shootT = now;
                 this.spend(106, 1);
                 const d = new THREE.Vector3();
@@ -3848,6 +4169,7 @@
                     if (now - this.eatT < 600) return;
                     if (p.hunger >= 20) { this.toast('Not hungry'); return; }
                     this.eatT = now;
+                    this.audio.play('eat');
                     p.hunger = Math.min(20, p.hunger + it.food);
                     this.spend(id, 1);
                     this.updateVitals();
@@ -3864,6 +4186,7 @@
                 const key = `${hit.x},${hit.y},${hit.z}`;
                 const chest = hit.id === 30 ? this.chests.get(key) : null;
                 const hb = BlockTypes[hit.id];
+                this.audio.play('break', this.audioMaterial(hit.id));
                 this.spawnParticles(hit.x, hit.y, hit.z, this.blockColor(hit.id), 14, 2.4, 0.1);
                 this.setBlockAt(hit.x, hit.y, hit.z, 0);
                 if (hit.id === 9) this.waterRegrowth.set(key, Date.now() + WATER_REGEN_MS);
@@ -3882,6 +4205,7 @@
             }
 
             openChest(key) {
+                this.audio.play('chest');
                 this.chestKey = key;
                 if (!this.chests.has(key)) this.chests.set(key, {});
                 if (document.pointerLockElement) document.exitPointerLock();
@@ -3939,6 +4263,7 @@
                         if (!Object.keys(r.need).every(k => (this.inv[k] || 0) >= r.need[k])) return;
                         Object.keys(r.need).forEach(k => this.spend(parseInt(k, 10), r.need[k]));
                         this.gain(r.out, r.n);
+                        this.audio.play('craft');
                     };
                     list.appendChild(row);
                 });
@@ -4005,6 +4330,10 @@
                     if (this.mine.key !== key) { this.mine.key = key; this.mine.hits = 0; }
                     this.mine.hits++;
                     this.mine.t = now;
+                    if (now - (this.mine.audioT || 0) > 160) {
+                        this.mine.audioT = now;
+                        this.audio.play('mine', this.audioMaterial(hit.id));
+                    }
                     const need = this.hitsFor(hit.id);
                     this.crack.position.set(hit.x, hit.y, hit.z);
                     this.crack.material.map = this.crackTex[Math.min(4, Math.floor((this.mine.hits / need) * 5))];
@@ -4028,6 +4357,7 @@
                     p.blocksPlaced++;
                     document.getElementById('stats-placed').innerText = p.blocksPlaced;
                     this.spend(id, 1);
+                    this.audio.play('place', this.audioMaterial(id));
                 }
             }
 
@@ -4194,6 +4524,7 @@
             }
 
             toggleInventory() {
+                this.audio.play('ui');
                 document.getElementById('inventory-modal').classList.toggle('hidden');
                 this.refreshInventory();
             }
@@ -4245,6 +4576,7 @@
 
             stepPhysics(dt, tx, tz) {
                 const p = this.player, c = this.controls;
+                const wasGrounded = p.isGrounded;
                 const onLadder = !p.isFlying && this.nearLadder();
                 const wet = this.inWater();
                 const a = 1 - Math.exp(-(p.isGrounded || p.isFlying ? 16 : 4) * dt);
@@ -4266,6 +4598,7 @@
                     p.jumpBuffer -= dt;
                     if ((p.jumpBuffer > 0 || c.jump) && p.coyote > 0) {
                         p.velocity.y = p.jumpSpeed;
+                        this.audio.play('jump');
                         p.coyote = 0;
                         p.jumpBuffer = 0;
                         p.isGrounded = false;
@@ -4277,6 +4610,7 @@
                 this.moveAxis('y', p.velocity.y * dt);
 
                 p.isGrounded = p.velocity.y <= 0 && this.collides(p.position.x, p.position.y - 0.04, p.position.z);
+                if (p.isGrounded && !wasGrounded && !wet) this.audio.play('land');
                 if (p.isGrounded || p.isFlying || wet) {
                     const fall = p.fallPeak - p.position.y;
                     if (p.isGrounded && !p.isFlying && !wet && fall > 3.2) this.damage(Math.floor((fall - 3) * (p.worn.feet ? 0.5 : 1)), 'You hit the ground too hard');
