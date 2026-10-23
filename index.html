@@ -421,23 +421,27 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-zinc-300 text-sm">
                 <div class="flex justify-between bg-black/40 p-3 rounded-xl border border-white/5">
                     <span class="font-medium">Move / Walk</span>
-                    <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400">Joystick / W A S D, Shift to sprint</span>
+                    <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400">Joystick / W A S D, Shift to sprint; controller left stick / LS</span>
                 </div>
                 <div class="flex justify-between bg-black/40 p-3 rounded-xl border border-white/5">
                     <span class="font-medium">Look Around</span>
-                    <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400">Touch Drag / Move Mouse; click game to capture</span>
+                    <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400">Touch Drag / Mouse; controller right stick</span>
                 </div>
                 <div class="flex justify-between bg-black/40 p-3 rounded-xl border border-white/5">
                     <span class="font-medium">Jump</span>
-                    <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400">Jump Btn / SPACE</span>
+                    <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400">Jump Btn / SPACE / A</span>
                 </div>
                 <div class="flex justify-between bg-black/40 p-3 rounded-xl border border-white/5">
                     <span class="font-medium">Mine / Break</span>
-                    <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400">Mine Btn / L-Click</span>
+                    <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400">Mine Btn / L-Click / LT</span>
                 </div>
                 <div class="flex justify-between bg-black/40 p-3 rounded-xl border border-white/5">
                     <span class="font-medium">Place / Use / Feed</span>
-                    <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400">Place Btn / R-Click</span>
+                    <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400">Place Btn / R-Click / RT</span>
+                </div>
+                <div class="flex justify-between gap-3 bg-black/40 p-3 rounded-xl border border-white/5">
+                    <span class="font-medium">Controller</span>
+                    <span class="bg-white/10 px-2 py-0.5 rounded font-mono text-emerald-400 text-right">B fly, X inventory, LB/RB hotbar, LS sprint, RS-click descend; A starts title</span>
                 </div>
                 <div class="flex justify-between gap-3 bg-black/40 p-3 rounded-xl border border-white/5">
                     <span class="font-medium">Hunt</span>
@@ -1403,9 +1407,17 @@
                     moveRight: false,
                     jump: false,
                     joystickVector: { x: 0, y: 0 },
+                    gamepadVector: { x: 0, y: 0 },
                     down: false,
                     sprint: false
                 };
+                this.gamepadButtons = [];
+                this.gamepadMineNext = 0;
+                this.gamepadConnected = false;
+                this.gamepadJump = false;
+                this.gamepadDown = false;
+                this.gamepadSprint = false;
+                this.keyboardSprint = false;
 
                 this.raycaster = new THREE.Raycaster();
                 this.cubeGeo = new THREE.BoxGeometry(1, 1, 1);
@@ -2383,6 +2395,18 @@
                 const canvas = this.renderer.domElement;
                 this.fallbackLookX = null;
                 this.fallbackLookY = null;
+                window.addEventListener('gamepadconnected', () => {
+                    this.gamepadConnected = true;
+                    if (this.gameStarted) this.toast('Controller connected');
+                });
+                window.addEventListener('gamepaddisconnected', () => {
+                    this.gamepadConnected = false;
+                    this.gamepadButtons = [];
+                    this.controls.gamepadVector.x = this.controls.gamepadVector.y = 0;
+                    this.gamepadJump = this.gamepadDown = this.gamepadSprint = false;
+                    this.controls.sprint = this.keyboardSprint;
+                    if (this.gameStarted) this.toast('Controller disconnected');
+                });
                 document.addEventListener('pointerdown', () => {
                     if (this.gameStarted) return;
                     this.audio.unlock();
@@ -2473,6 +2497,82 @@
             releaseInputs() {
                 const c = this.controls;
                 c.moveForward = c.moveBackward = c.moveLeft = c.moveRight = c.jump = c.down = c.sprint = false;
+                c.gamepadVector.x = c.gamepadVector.y = 0;
+                this.gamepadJump = this.gamepadDown = this.gamepadSprint = false;
+                this.keyboardSprint = false;
+            }
+
+            updateGamepad(dt) {
+                const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+                let pad = null;
+                for (const candidate of pads) {
+                    if (candidate && candidate.connected) { pad = candidate; break; }
+                }
+                const c = this.controls;
+                if (!pad) {
+                    c.gamepadVector.x = c.gamepadVector.y = 0;
+                    this.gamepadJump = this.gamepadDown = this.gamepadSprint = false;
+                    c.sprint = this.keyboardSprint;
+                    this.gamepadButtons = [];
+                    return;
+                }
+                if (!this.gamepadConnected) {
+                    this.gamepadConnected = true;
+                    if (this.gameStarted) this.toast('Controller connected');
+                }
+                const button = index => {
+                    const b = pad.buttons[index];
+                    return !!(b && (b.pressed || b.value > 0.5));
+                };
+                const axis = index => {
+                    const value = pad.axes[index] || 0;
+                    const deadzone = 0.16;
+                    if (Math.abs(value) <= deadzone) return 0;
+                    return Math.sign(value) * (Math.abs(value) - deadzone) / (1 - deadzone);
+                };
+                const was = this.gamepadButtons;
+                const pressed = index => button(index) && !was[index];
+                this.gamepadButtons = Array.from({ length: pad.buttons.length }, (_, i) => button(i));
+
+                if (!this.gameStarted) {
+                    if (pressed(0)) {
+                        this.audio.unlock();
+                        this.startGame();
+                    }
+                    return;
+                }
+
+                c.gamepadVector.x = axis(0);
+                c.gamepadVector.y = axis(1);
+                const lookX = axis(2), lookY = axis(3);
+                if (Math.abs(lookX) + Math.abs(lookY) > 0) this.rotateCamera(lookX * dt * 450, lookY * dt * 450);
+
+                this.gamepadJump = button(0);
+                if (this.gamepadJump && !was[0]) this.player.jumpBuffer = 0.14;
+                this.gamepadDown = button(11);
+                this.gamepadSprint = button(10);
+                c.sprint = this.keyboardSprint || this.gamepadSprint;
+
+                if (button(6) && performance.now() >= this.gamepadMineNext) {
+                    this.handleRaycastAction('break');
+                    this.gamepadMineNext = performance.now() + 230;
+                } else if (!button(6)) this.gamepadMineNext = 0;
+                if (pressed(7)) this.handleRaycastAction('place');
+                if (pressed(1)) {
+                    this.player.isFlying = !this.player.isFlying;
+                    this.player.velocity.set(0, 0, 0);
+                }
+                if (pressed(2)) {
+                    if (document.pointerLockElement) document.exitPointerLock();
+                    this.toggleInventory();
+                }
+                if (pressed(4) || pressed(14)) {
+                    this.player.selectedSlot = (this.player.selectedSlot + 8) % 9;
+                    this.updateHotbarUI();
+                } else if (pressed(5) || pressed(15) || pressed(3)) {
+                    this.player.selectedSlot = (this.player.selectedSlot + 1) % 9;
+                    this.updateHotbarUI();
+                }
             }
 
             initTouchControls() {
@@ -2613,7 +2713,8 @@
                         this.controls.jump = isDown;
                         break;
                     case 'ShiftLeft': case 'ShiftRight':
-                        this.controls.sprint = isDown;
+                        this.keyboardSprint = isDown;
+                        this.controls.sprint = this.keyboardSprint || this.gamepadSprint;
                         this.controls.down = isDown;
                         break;
                     case 'KeyF':
@@ -2953,8 +3054,8 @@
                 if (a.type === 'boat') { this.boatUpdate(a, dt); return; }
                 const c = this.controls;
                 const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw), rx = Math.cos(this.yaw), rz = -Math.sin(this.yaw);
-                let ix = (c.moveRight ? 1 : 0) - (c.moveLeft ? 1 : 0) + c.joystickVector.x;
-                let iz = (c.moveForward ? 1 : 0) - (c.moveBackward ? 1 : 0) - c.joystickVector.y;
+                let ix = (c.moveRight ? 1 : 0) - (c.moveLeft ? 1 : 0) + c.joystickVector.x + c.gamepadVector.x;
+                let iz = (c.moveForward ? 1 : 0) - (c.moveBackward ? 1 : 0) - c.joystickVector.y - c.gamepadVector.y;
                 const mag = Math.hypot(ix, iz);
                 if (mag > 1) { ix /= mag; iz /= mag; }
                 a.walking = mag > 0.1;
@@ -3069,8 +3170,8 @@
             boatUpdate(a, dt) {
                 const c = this.controls;
                 const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw), rx = Math.cos(this.yaw), rz = -Math.sin(this.yaw);
-                let ix = (c.moveRight ? 1 : 0) - (c.moveLeft ? 1 : 0) + c.joystickVector.x;
-                let iz = (c.moveForward ? 1 : 0) - (c.moveBackward ? 1 : 0) - c.joystickVector.y;
+                let ix = (c.moveRight ? 1 : 0) - (c.moveLeft ? 1 : 0) + c.joystickVector.x + c.gamepadVector.x;
+                let iz = (c.moveForward ? 1 : 0) - (c.moveBackward ? 1 : 0) - c.joystickVector.y - c.gamepadVector.y;
                 const mag = Math.hypot(ix, iz);
                 if (mag > 1) { ix /= mag; iz /= mag; }
                 a.y = SEA + 0.42 + Math.sin(performance.now() * 0.002) * 0.03;
@@ -4912,8 +5013,8 @@
                 const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
                 const rx = Math.cos(this.yaw), rz = -Math.sin(this.yaw);
 
-                let ix = (c.moveRight ? 1 : 0) - (c.moveLeft ? 1 : 0) + c.joystickVector.x;
-                let iz = (c.moveForward ? 1 : 0) - (c.moveBackward ? 1 : 0) - c.joystickVector.y;
+                let ix = (c.moveRight ? 1 : 0) - (c.moveLeft ? 1 : 0) + c.joystickVector.x + c.gamepadVector.x;
+                let iz = (c.moveForward ? 1 : 0) - (c.moveBackward ? 1 : 0) - c.joystickVector.y - c.gamepadVector.y;
                 const mag = Math.hypot(ix, iz);
                 if (mag > 1) { ix /= mag; iz /= mag; }
 
@@ -4952,6 +5053,8 @@
 
             stepPhysics(dt, tx, tz) {
                 const p = this.player, c = this.controls;
+                const jump = c.jump || this.gamepadJump;
+                const down = c.down || this.gamepadDown;
                 const wasGrounded = p.isGrounded;
                 const onLadder = !p.isFlying && this.nearLadder();
                 const wet = this.inWater();
@@ -4960,19 +5063,19 @@
                 p.velocity.z += (tz - p.velocity.z) * a;
 
                 if (p.isFlying) {
-                    const ty = ((c.jump ? 1 : 0) - (c.down ? 1 : 0)) * p.speed * 1.2;
+                    const ty = ((jump ? 1 : 0) - (down ? 1 : 0)) * p.speed * 1.2;
                     p.velocity.y += (ty - p.velocity.y) * (1 - Math.exp(-12 * dt));
                 } else if (onLadder) {
-                    const climb = (c.jump || c.moveForward ? 1 : 0) - (c.down || c.moveBackward ? 1 : 0);
+                    const climb = (jump || c.moveForward ? 1 : 0) - (down || c.moveBackward ? 1 : 0);
                     p.velocity.y = climb * p.speed * 0.8;
                     p.coyote = 0.1;
                     p.jumpBuffer = 0;
                 } else {
-                    if (wet) { p.velocity.y = Math.min(3.5, Math.max(p.velocity.y + p.gravity * 0.45 * dt, -1.5) + (c.jump ? 22 * dt : 0)); }
+                    if (wet) { p.velocity.y = Math.min(3.5, Math.max(p.velocity.y + p.gravity * 0.45 * dt, -1.5) + (jump ? 22 * dt : 0)); }
                     else p.velocity.y = Math.max(p.velocity.y - p.gravity * dt, -50);
                     p.coyote = p.isGrounded ? 0.1 : p.coyote - dt;
                     p.jumpBuffer -= dt;
-                    if ((p.jumpBuffer > 0 || c.jump) && p.coyote > 0) {
+                    if ((p.jumpBuffer > 0 || jump) && p.coyote > 0) {
                         p.velocity.y = p.jumpSpeed;
                         this.audio.play('jump');
                         p.coyote = 0;
@@ -5061,6 +5164,7 @@
                 requestAnimationFrame(() => this.animate());
 
                 const delta = Math.min(this.clock.getDelta(), 0.1);
+                this.updateGamepad(delta);
                 if (this.gameStarted) {
                     this.updatePlayer(delta);
                     this.updateSurvival(delta);
