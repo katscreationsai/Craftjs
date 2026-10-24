@@ -3417,9 +3417,10 @@
                 const n = this.noiseGen;
                 const a = (n.noise(x * 0.05 + 11.3, y * 0.07 + 3.1, z * 0.05 + 7.7) - 0.55) * 2.2;
                 const b = (n.noise(x * 0.05 + 91.1, y * 0.07 + 13.7, z * 0.05 + 53.3) - 0.55) * 2.2;
-                if (Math.abs(a) < 0.1 && Math.abs(b) < 0.1) return true;
+                if (Math.abs(a) < 0.14 && Math.abs(b) < 0.14) return true;
                 const c = (n.noise(x * 0.03 + 5.5, y * 0.045 + 9.9, z * 0.03 + 21.1) - 0.55) * 2.2;
-                return c > 0.62 && y < 36;
+                const chamber = (n.noise(x * 0.022 + 31.2, y * 0.032 + 8.4, z * 0.022 + 19.7) - 0.55) * 2.2;
+                return (c > 0.58 && y < 44) || (chamber > 0.73 && y < 38);
             }
 
             entranceAt(x, z) {
@@ -3427,16 +3428,32 @@
             }
 
             // What a deep (below the explicit top layers) cell contains. Pure function of position, so it can be rebuilt on demand.
+            oreVeinAt(x, y, z) {
+                const gx = Math.floor(x / 5), gy = Math.floor(y / 4), gz = Math.floor(z / 5);
+                let best = 0;
+                for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) {
+                    const cx = gx + dx, cy = gy + dy, cz = gz + dz;
+                    const ox = cx * 5 + this.hash3(cx + 17, cy + 29, cz + 43) * 5;
+                    const oy = cy * 4 + this.hash3(cx + 53, cy + 71, cz + 89) * 4;
+                    const oz = cz * 5 + this.hash3(cx + 97, cy + 101, cz + 113) * 5;
+                    let id, chance, rx, ry, rz;
+                    if (oy < 12) { id = 45; chance = 0.09; rx = 1.35; ry = 1.1; rz = 1.35; }
+                    else if (oy < 21) { id = 44; chance = 0.13; rx = 1.6; ry = 1.15; rz = 1.6; }
+                    else if (oy < 40) { id = 43; chance = 0.2; rx = 1.8; ry = 1.25; rz = 1.8; }
+                    else { id = 42; chance = 0.3; rx = 1.9; ry = 1.35; rz = 1.9; }
+                    if (this.hash3(cx + 127, cy + 131, cz + 137) >= chance) continue;
+                    const nx = (x - ox) / rx, ny = (y - oy) / ry, nz = (z - oz) / rz;
+                    const shape = nx * nx + ny * ny + nz * nz;
+                    if (shape < 1 && id > best) best = id;
+                }
+                return best;
+            }
+
             deepId(x, y, z, h) {
                 if (y <= 0) return 3;
                 if (y > h - 7) return null;
                 if (this.isCave(x, y, z, h)) return 0;
-                const r = this.hash3(x, y, z);
-                if (y < 14 && r < 0.003) return 45;
-                if (y < 22 && r > 0.003 && r < 0.0075) return 44;
-                if (y < 40 && r > 0.0075 && r < 0.0145) return 43;
-                if (r > 0.0145 && r < 0.0345) return 42;
-                return 3;
+                return this.oreVeinAt(x, y, z) || 3;
             }
 
             virtualAt(x, y, z) {
@@ -3691,15 +3708,18 @@
                 const key = vx + ',' + vz;
                 if (this.vcache.has(key)) return this.vcache.get(key);
                 let out = null;
-                if (this.hash(vx, vz, 77) < 0.22) {
-                    const cx = vx * 128 + 32 + Math.floor(this.hash(vx, vz, 78) * 64), cz = vz * 128 + 32 + Math.floor(this.hash(vx, vz, 79) * 64);
-                    const t = this.terrain(cx, cz);
-                    let ok = (t.biome === 'plains' || t.biome === 'forest') && t.h > SEA + 2;
-                    if (ok) for (const o of [[16, 0], [-16, 0], [0, 16], [0, -16], [11, 11], [-11, -11], [11, -11], [-11, 11]]) {
-                        const q = this.terrain(cx + o[0], cz + o[1]);
-                        if (Math.abs(q.h - t.h) > 4 || q.biome === 'ocean' || q.biome === 'beach') { ok = false; break; }
+                if (this.hash(vx, vz, 77) < 0.38) {
+                    for (let attempt = 0; attempt < 12 && !out; attempt++) {
+                        const cx = vx * 128 + 32 + Math.floor(this.hash(vx, vz, 78 + attempt * 2) * 64);
+                        const cz = vz * 128 + 32 + Math.floor(this.hash(vx, vz, 79 + attempt * 2) * 64);
+                        const t = this.terrain(cx, cz);
+                        let ok = (t.biome === 'plains' || t.biome === 'forest') && t.h > SEA + 2;
+                        if (ok) for (const o of [[9, 0], [-9, 0], [0, 9], [0, -9], [7, 7], [-7, -7], [7, -7], [-7, 7]]) {
+                            const q = this.terrain(cx + o[0], cz + o[1]);
+                            if (Math.abs(q.h - t.h) > 3 || q.biome === 'ocean' || q.biome === 'beach') { ok = false; break; }
+                        }
+                        if (ok) out = this.buildVillage(cx, cz, t.h);
                     }
-                    if (ok) out = this.buildVillage(cx, cz, t.h);
                 }
                 this.vcache.set(key, out);
                 return out;
@@ -3748,6 +3768,8 @@
                     set(cx + dx, hc + 1, cz + dz, 14);
                     set(cx + dx, hc + 4, cz + dz, 200);
                 }
+                set(cx + 2, hc + 1, cz, 30);
+                chests.push([cx + 2, hc + 1, cz]);
                 [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(o => { set(cx + o[0], hc + 2, cz + o[1], 280); set(cx + o[0], hc + 3, cz + o[1], 280); });
                 set(cx + 3, hc + 1, cz + 3, 282); set(cx - 3, hc + 1, cz - 3, 282);
                 return { cells, chests, npcs };
